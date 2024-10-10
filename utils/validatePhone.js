@@ -1,6 +1,10 @@
 
 const isPhoneValid = (phoneNumber, max=11) => {
 
+    if(typeof phoneNumber != 'string') {
+        return false
+    }
+
     const numbers = '0123456789'
 
     if(max && phoneNumber.length != max) {

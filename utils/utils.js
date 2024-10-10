@@ -21,7 +21,7 @@ const { isValidURL } = require('./validateURL')
 const { getTime, getAge, getHoursDifference } = require('./format-time')
 const { isPasswordStrong } = require('./validatePassword')
 const { calculateExpertProfileCompletePercentage } = require('./calculateProfileCompletePercentage')
-
+const { isValidTypes, isValidSubtypes } = require('./validateTypes')
 
 module.exports = {
     isRolesValid,
@@ -55,5 +55,7 @@ module.exports = {
     isTimeValid,
     getHoursDifference,
     isPasswordStrong,
-    calculateExpertProfileCompletePercentage
+    calculateExpertProfileCompletePercentage,
+    isValidTypes,
+    isValidSubtypes
 }
