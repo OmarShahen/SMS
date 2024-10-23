@@ -23,7 +23,7 @@ const addStudent = (studentData) => {
 
     if(!parentPhone) return { isAccepted: false, message: 'الرقم غير صحيح', field: 'parentPhone' }
 
-    if(!utils.isPhoneValid(parentPhone)) return { isAccepted: false, message: 'Parent phone format is invalid', field: 'parentPhone' }
+    if(!utils.isPhoneValid(parentPhone)) return { isAccepted: false, message: 'تنسيق هاتف الوالدين غير صالح', field: 'parentPhone' }
 
     if(!gender) return { isAccepted: false, message: 'Gender is required', field: 'gender' }
 

@@ -1,18 +1,19 @@
 const StudentModel = require('../models/StudentModel')
 const GroupModel = require('../models/GroupModel')
 const UserModel = require('../models/UserModel')
+const GradeModel = require('../models/GradeModel')
 const CounterModel = require('../models/CounterModel')
 const studentValidation = require('../validations/students')
 const utils = require('../utils/utils')
 const config = require('../config/config')
-
+const mongoose = require('mongoose')
 
 const getUserStudents = async (request, response) => {
 
     try {
 
         const { userId } = request.params
-        let { groupId, name, phone, parentPhone, gender, referredBy, isActive, academicYear, limit, page } = request.query
+        let { groupId, name, phone, gender, referredBy, isActive, academicYear, limit, page } = request.query
 
         let { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -21,7 +22,7 @@ const getUserStudents = async (request, response) => {
 
         const skip = (page - 1) * limit
 
-        searchQuery = name || phone || parentPhone ? { ...searchQuery, $or: [] } : { ...searchQuery }
+        searchQuery = name || phone ? { ...searchQuery, $or: [] } : { ...searchQuery }
 
         if(name) {
             searchQuery.$or.push({ name: { $regex: name, $options: 'i' } })
@@ -31,12 +32,8 @@ const getUserStudents = async (request, response) => {
             searchQuery.$or.push({ phone: { $regex: phone, $options: 'i' } })
         }
 
-        if(parentPhone) {
-            searchQuery.$or.push({ parentPhone: { $regex: parentPhone, $options: 'i' } })
-        }
-
         if(groupId) {
-            searchQuery.groupId = groupId
+            searchQuery.groupId = mongoose.Types.ObjectId(groupId)
         }
 
         if(isActive == 'TRUE') {
@@ -161,11 +158,11 @@ const addStudent = async (request, response) => {
             })
         }
 
-        const totalPhones = await StudentModel.countDocuments({ userId, groupId, phone })
+        const totalPhones = await StudentModel.countDocuments({ userId, phone })
         if(totalPhones != 0) {
             return response.status(400).json({
                 accepted: false,
-                message: 'هاتف الطالب مسجل مسبقا في هذه المجموعة',
+                message: 'هاتف الطالب مسجل مسبقا',
                 field: 'phone'
             })
         }
@@ -210,12 +207,25 @@ const updateStudent = async (request, response) => {
         }
 
         const { studentId } = request.params
-        const { name, phone } = request.body
+        let { name, phone, groupId } = request.body
 
         const student = await StudentModel.findById(studentId)
 
+        if(groupId && student.groupId != groupId) {
+            const group = await GroupModel.findById(groupId)
+            if(!group) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Group ID does not exist',
+                    field: 'groupId'
+                })
+            }
+        }
+
+        groupId = groupId && student.groupId != groupId ? groupId : student.groupId
+
         if(name && student.name != name) {
-            const totalNames = await StudentModel.countDocuments({ userId: student.userId, groupId: student.groupId, name })
+            const totalNames = await StudentModel.countDocuments({ userId: student.userId, groupId, name })
             if(totalNames != 0) {
                 return response.status(400).json({
                     accepted: false,
@@ -226,11 +236,11 @@ const updateStudent = async (request, response) => {
         }
 
         if(phone && student.phone != phone) {
-            const totalPhones = await StudentModel.countDocuments({ userId: student.userId, groupId: student.groupId, phone })
+            const totalPhones = await StudentModel.countDocuments({ userId: student.userId, phone })
             if(totalPhones != 0) {
                 return response.status(400).json({
                     accepted: false,
-                    message: 'هاتف الطالب مسجل مسبقا في هذه المجموععة',
+                    message: 'هاتف الطالب مسجل مسبقا',
                     field: 'phone'
                 })
             } 
@@ -260,6 +270,15 @@ const deleteStudent = async (request, response) => {
     try {
 
         const { studentId } = request.params
+
+        const totalGrades = await GradeModel.countDocuments({ studentId })
+        if(totalGrades != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك درجات مسجلة في هذا الطالب',
+                field: 'studentId'
+            })
+        }
 
         const deletedStudent = await StudentModel.findByIdAndDelete(studentId)
 

@@ -1,9 +1,12 @@
 const ExamModel = require('../models/ExamModel')
 const UserModel = require('../models/UserModel')
+const GroupModel = require('../models/GroupModel')
+const GradeModel = require('../models/GradeModel')
 const CounterModel = require('../models/CounterModel')
 const examValidation = require('../validations/exams')
 const utils = require('../utils/utils')
 const config = require('../config/config')
+const mongoose = require('mongoose')
 
 
 const getUserExams = async (request, response) => {
@@ -11,7 +14,7 @@ const getUserExams = async (request, response) => {
     try {
 
         const { userId } = request.params
-        let { name, types, subtypes, isActive, academicYear, limit, page } = request.query
+        let { name, groupId, type, subtype, isActive, academicYear, limit, page } = request.query
 
         let { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -20,15 +23,16 @@ const getUserExams = async (request, response) => {
 
         const skip = (page - 1) * limit
 
-        types = types ? types.split(',') : []
-        subtypes = subtypes ? subtypes.split(',') : []
-
-        if (types.length) {
-            searchQuery.types = { $in: types }
+        if(groupId) {
+            searchQuery.groups = { $in: [mongoose.Types.ObjectId(groupId)] }
         }
 
-        if (subtypes.length) {
-            searchQuery.subtypes = { $in: subtypes }
+        if (type) {
+            searchQuery.type = type
+        }
+
+        if (subtype) {
+            searchQuery.subtype = subtype
         }
 
         if(name) {
@@ -66,6 +70,14 @@ const getUserExams = async (request, response) => {
                     localField: 'userId',
                     foreignField: '_id',
                     as: 'user'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'groups',
+                    localField: 'groups',
+                    foreignField: '_id',
+                    as: 'group'
                 }
             },
             {
@@ -111,7 +123,7 @@ const addExam = async (request, response) => {
             })
         }
 
-        const { userId, name, academicYear } = request.body
+        let { userId, groups, name, academicYear } = request.body
 
         const user = await UserModel.findById(userId)
         if(!user) {
@@ -119,6 +131,15 @@ const addExam = async (request, response) => {
                 accepted: false,
                 message: 'User ID is not registered',
                 field: 'userId'
+            })
+        }
+
+        const totalGroups = await GroupModel.countDocuments({ userId, academicYear, _id: { $in: groups } })
+        if(totalGroups != groups.length) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'المجموعات غير مسجلة في هذه السنة الدراسية',
+                field: 'groups'
             })
         }
 
@@ -171,7 +192,7 @@ const updateExam = async (request, response) => {
         }
 
         const { examId } = request.params
-        const { name } = request.body
+        const { name, groups } = request.body
 
         const exam = await ExamModel.findById(examId)
 
@@ -184,6 +205,17 @@ const updateExam = async (request, response) => {
                     field: 'name'
                 })
             } 
+        }
+
+        if(groups) {
+            const totalGroups = await GroupModel.countDocuments({ userId: exam.userId, academicYear: exam.academicYear, _id: { $in: groups } })
+            if(totalGroups != groups.length) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'المجموعات غير مسجلة في هذه السنة الدراسية',
+                    field: 'groups'
+                })
+            }
         }
 
         const updatedExam = await ExamModel
@@ -240,11 +272,55 @@ const updateExamURL = async (request, response) => {
     }
 }
 
+const updateExamAnswerURL = async (request, response) => {
+
+    try {
+
+        const dataValidation = examValidation.updateExamAnswerURL(request.body)
+        if(!dataValidation.isAccepted) {
+            return response.status(400).json({
+                accepted: dataValidation.isAccepted,
+                message: dataValidation.message,
+                field: dataValidation.field
+            })
+        }
+
+        const { examId } = request.params
+        const { answerURL } = request.body
+
+        const updatedExam = await ExamModel
+        .findByIdAndUpdate(examId, { answeredURL: answerURL }, { new: true })
+
+        return response.status(200).json({
+            accepted: true,
+            message: 'تم تحديث ملف الاختبار المحلول بنجاح',
+            exam: updatedExam,
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
 const deleteExam = async (request, response) => {
 
     try {
 
         const { examId } = request.params
+
+        const totalGrades = await GradeModel.countDocuments({ examId })
+        if(totalGrades != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك درجات مسجلة في هذا الاختبار',
+                field: 'examId'
+            })
+        }
 
         const deletedExam = await ExamModel.findByIdAndDelete(examId)
 
@@ -265,4 +341,4 @@ const deleteExam = async (request, response) => {
 }
 
 
-module.exports = { getUserExams, addExam, updateExam, updateExamURL, deleteExam }
+module.exports = { getUserExams, addExam, updateExam, updateExamURL, updateExamAnswerURL, deleteExam }

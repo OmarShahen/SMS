@@ -10,8 +10,8 @@ const sendVerificationCode = async (verificationData) => {
         const mailOptions = {
             from: config.EMAIL.APP_MAIL,
             to: receiverEmail,
-            subject: 'Account Email Verification',
-            text: `This is your account verification code ${verificationCode}`
+            subject: 'التحقق من البريد الإلكتروني للحساب',
+            text: `هذا هو رمز التحقق من حسابك ${verificationCode}`
         }
 
         const success = await transporter.sendMail(mailOptions)

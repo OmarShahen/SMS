@@ -22,6 +22,7 @@ const { getTime, getAge, getHoursDifference } = require('./format-time')
 const { isPasswordStrong } = require('./validatePassword')
 const { calculateExpertProfileCompletePercentage } = require('./calculateProfileCompletePercentage')
 const { isValidTypes, isValidSubtypes } = require('./validateTypes')
+const { isValidTelegramInput } = require('./validateTelegram')
 
 module.exports = {
     isRolesValid,
@@ -57,5 +58,6 @@ module.exports = {
     isPasswordStrong,
     calculateExpertProfileCompletePercentage,
     isValidTypes,
-    isValidSubtypes
+    isValidSubtypes,
+    isValidTelegramInput
 }

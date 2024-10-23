@@ -1,7 +1,7 @@
 const router = require('express').Router()
 const gradesController = require('../controllers/grades')
 const authorization = require('../middlewares/verify-permission')
-const { verifyUserId, verifyGradeId } = require('../middlewares/verify-routes-params')
+const { verifyUserId, verifyGradeId, verifyExamId } = require('../middlewares/verify-routes-params')
 
 
 router.get(
@@ -9,6 +9,13 @@ router.get(
     authorization.allPermission,
     verifyUserId,
     (request, response) => gradesController.getUserGrades(request, response)
+)
+
+router.get(
+    '/v1/grades/exams/:examId',
+    authorization.allPermission,
+    verifyExamId,
+    (request, response) => gradesController.getStudentsThatAreGraded(request, response)
 )
 
 router.post(

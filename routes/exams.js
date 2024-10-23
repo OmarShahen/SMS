@@ -31,6 +31,13 @@ router.patch(
     (request, response) => examsController.updateExamURL(request, response)
 )
 
+router.patch(
+    '/v1/exams/:examId/answered-url',
+    authorization.allPermission,
+    verifyExamId,
+    (request, response) => examsController.updateExamAnswerURL(request, response)
+)
+
 router.delete(
     '/v1/exams/:examId',
     authorization.allPermission,

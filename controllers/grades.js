@@ -1,12 +1,11 @@
-const GroupModel = require('../models/GroupModel')
 const GradeModel = require('../models/GradeModel')
 const UserModel = require('../models/UserModel')
 const ExamModel = require('../models/ExamModel')
 const StudentModel = require('../models/StudentModel')
-const CounterModel = require('../models/CounterModel')
 const gradeValidation = require('../validations/grades')
 const utils = require('../utils/utils')
 const config = require('../config/config')
+const mongoose = require('mongoose')
 
 
 const getUserGrades = async (request, response) => {
@@ -14,7 +13,7 @@ const getUserGrades = async (request, response) => {
     try {
 
         const { userId } = request.params
-        let { studentId, examId, correctorId, limit, page } = request.query
+        let { studentId, examId, correctorId, groupId, academicYear, limit, page } = request.query
 
         const { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -24,15 +23,23 @@ const getUserGrades = async (request, response) => {
         const skip = (page - 1) * limit
 
         if(studentId) {
-            searchQuery.studentId = studentId
+            searchQuery.studentId = mongoose.Types.ObjectId(studentId)
+        }
+
+        if(groupId) {
+            searchQuery.groupId = mongoose.Types.ObjectId(groupId)
         }
 
         if(examId) {
-            searchQuery.examId = examId
+            searchQuery.examId = mongoose.Types.ObjectId(examId)
         }
 
         if(correctorId) {
-            searchQuery.correctorId = correctorId
+            searchQuery.correctorId = mongoose.Types.ObjectId(correctorId)
+        }
+
+        if(academicYear) {
+            searchQuery.academicYear = academicYear
         }
 
         const grades = await GradeModel.aggregate([
@@ -76,10 +83,10 @@ const getUserGrades = async (request, response) => {
             },
             {
                 $lookup: {
-                    from: 'users',
-                    localField: 'correctorId',
+                    from: 'groups',
+                    localField: 'groupId',
                     foreignField: '_id',
-                    as: 'corrector'
+                    as: 'group'
                 }
             },
             {
@@ -94,7 +101,7 @@ const getUserGrades = async (request, response) => {
             grade.user = grade.user[0]
             grade.exam = grade.exam[0]
             grade.student = grade.student[0]
-            grade.corrector = grade.corrector[0]
+            grade.group = grade.group[0]
         })
 
         const totalGrades = await GradeModel.countDocuments(searchQuery)
@@ -115,6 +122,31 @@ const getUserGrades = async (request, response) => {
     }
 }
 
+const getStudentsThatAreGraded = async (request, response) => {
+
+    try {
+
+        const { examId } = request.params
+
+        const grades = await GradeModel
+        .find({ examId })
+
+        const students = grades.map(grade => grade.studentId)
+
+        return response.status(200).json({
+            accepted: true,
+            students
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
 
 const addGrade = async (request, response) => {
 
@@ -129,7 +161,7 @@ const addGrade = async (request, response) => {
             })
         }
 
-        const { userId, studentId, examId, correctorId } = request.body
+        const { userId, studentId, examId, correctorId, score } = request.body
 
         const userPromise = UserModel.findById(userId)
         const studentPromise = StudentModel.findById(studentId)
@@ -175,6 +207,14 @@ const addGrade = async (request, response) => {
             })
         }
 
+        if(exam.totalMarks < score) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'درجة الطالب اعلي من اجمالي درجات الاختبار',
+                field: 'score'
+            })
+        }
+
         const totalExamGrades = await GradeModel.countDocuments({ studentId, examId })
         if(totalExamGrades != 0) {
             return response.status(400).json({
@@ -184,7 +224,7 @@ const addGrade = async (request, response) => {
             })
         }
 
-        const gradeData = { ...request.body }
+        const gradeData = { ...request.body, groupId: student.groupId, academicYear: student.academicYear }
         const gradeObj = new GradeModel(gradeData)
         const newGrade = await gradeObj.save()
 
@@ -218,6 +258,21 @@ const updateGrade = async (request, response) => {
         }
 
         const { gradeId } = request.params
+        const { score } = request.body
+
+        if(score) {
+            const grade = await GradeModel.findById(gradeId)
+            const exam = await ExamModel.findById(grade.examId)
+
+            if(exam.totalMarks < score) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'درجة الطالب اعلي من اجمالي درجات الاختبار',
+                    field: 'score'
+                })
+            }
+            
+        }
 
         const updatedGrade = await GradeModel
         .findByIdAndUpdate(gradeId, request.body, { new: true })
@@ -263,4 +318,4 @@ const deleteGrade = async (request, response) => {
 }
 
 
-module.exports = { getUserGrades, addGrade, updateGrade, deleteGrade }
+module.exports = { getUserGrades, getStudentsThatAreGraded, addGrade, updateGrade, deleteGrade }

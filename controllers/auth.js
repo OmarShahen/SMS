@@ -3,12 +3,14 @@ const authValidation = require('../validations/auth')
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
 const UserModel = require('../models/UserModel')
+const CounterModel = require('../models/CounterModel')
 const EmailVerificationModel = require('../models/EmailVerificationModel')
 const { generateVerificationCode } = require('../utils/random-number')
 const utils = require('../utils/utils')
 const { sendForgotPasswordVerificationCode } = require('../mails/forgot-password')
 const { sendDeleteAccountCode } = require('../mails/delete-account')
 const translations = require('../i18n/index')
+const { sendVerificationCode } = require('../mails/verification-code')
 
 
 const userLogin = async (request, response) => {
@@ -66,6 +68,70 @@ const userLogin = async (request, response) => {
             accepted: true,
             token: token,
             user: updatedUser,
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+const userSignup = async (request, response) => {
+
+    try {
+
+        const dataValidation = authValidation.userSignup(request.body)
+        if(!dataValidation.isAccepted) {
+            return response.status(400).json({
+                accepted: dataValidation.isAccepted,
+                message: dataValidation.message,
+                field: dataValidation.field
+            })
+        }
+
+        const { email, password } = request.body
+
+        const emailList = await UserModel.find({ email, isVerified: true })
+        if(emailList.length != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: translations[request.query.lang]['Email is already registered'],
+                field: 'email'
+            })
+        }
+
+        const counter = await CounterModel.findOneAndUpdate(
+            { name: 'user' },
+            { $inc: { value: 1 } },
+            { new: true, upsert: true }
+        )
+
+        const userPassword = bcrypt.hashSync(password, config.SALT_ROUNDS)
+        let userData = { ...request.body, userId: counter.value, password: userPassword, type: 'TEACHER' }
+        userData._id = undefined
+
+        const userObj = new UserModel(userData)
+        const newUser = await userObj.save()
+
+        const verificationCode = generateVerificationCode()
+        const mailData = await sendVerificationCode({ receiverEmail: email, verificationCode })
+
+        const emailVerificationData = { userId: newUser._id, code: verificationCode }
+        const emailVerificationObj = new EmailVerificationModel(emailVerificationData)
+        const newEmailVerification = await emailVerificationObj.save()
+
+        newUser.password = undefined
+
+        return response.status(200).json({
+            accepted: true,
+            mailSuccess: mailData.isSent,
+            message: mailData.isSent ? 'Verification code is sent successfully!' : 'There was a problem sending your email',
+            user: newUser,
+            emailVerification: newEmailVerification
         })
 
     } catch(error) {
@@ -217,14 +283,18 @@ const addUserEmailVerificationCode = async (request, response) => {
             })
         }
 
-        const emailVerificationData = { userId, code: generateVerificationCode() }
+        const verificationCode = generateVerificationCode()
+        const mailData = await sendVerificationCode({ receiverEmail: user.email, verificationCode })
+
+        const emailVerificationData = { userId, code: verificationCode }
         const emailVerificationObj = new EmailVerificationModel(emailVerificationData)
         const newEmailverification = await emailVerificationObj.save()
 
         return response.status(200).json({
             accepted: true,
             message: 'email verification code created successfully!',
-            emailVerification: newEmailverification
+            emailVerification: newEmailverification,
+            mailData
         })
 
     } catch(error) {
@@ -537,6 +607,7 @@ const resetPassword = async (request, response) => {
 
 module.exports = {
     userLogin,
+    userSignup,
     verifyEmailVerificationCode,
     verifyEmail,
     setUserVerified,

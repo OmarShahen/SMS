@@ -14,7 +14,8 @@ const StudentSchema = new mongoose.Schema({
     isActive: { type: Boolean, default: true },
     academicYear: { type: String, required: true, enum: config.ACADEMIC_YEARS },
     address: { type: String },
-    referredBy: { type: String, enum: config.REFER_METHODS }
+    referredBy: { type: String, enum: config.REFER_METHODS },
+    telegramId: { type: String }
 
 }, { timestamps: true })
 

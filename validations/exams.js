@@ -3,7 +3,7 @@ const config = require('../config/config')
 
 const addExam = (examData) => {
 
-    const { userId, name, types, subtypes, description, isActive, academicYear, duration, totalMarks, date } = examData
+    const { userId, groups, name, chapters, type, subtype, description, isActive, academicYear, duration, totalMarks, date } = examData
 
     if(!userId) return { isAccepted: false, message: 'User ID is required', field: 'userId' }
 
@@ -13,13 +13,17 @@ const addExam = (examData) => {
 
     if(typeof name != 'string') return { isAccepted: false, message: 'Name format is invalid', field: 'name' }
 
-    if(!Array.isArray(types)) return { isAccepted: false, message: 'Types format is invalid', field: 'types' }
+    if(!Array.isArray(groups) || groups.length == 0) return { isAccepted: false, message: 'Groups format is invalid', field: 'groups' }
 
-    if(!utils.isValidTypes(types)) return { isAccepted: false, message: 'Types value is invalid', field: 'types' }
+    if(!groups.every(groupId => utils.isObjectId(groupId))) return { isAccepted: false, message: 'Groups value is invalid', field: 'groups' }
 
-    if(!Array.isArray(subtypes)) return { isAccepted: false, message: 'Subtypes format is invalid', field: 'subtypes' }
+    //if(chapters && !Array.isArray(chapters) || chapters.length == 0) return { isAccepted: false, message: 'Chapters format is invalid', field: 'chapters' }
 
-    if(!utils.isValidSubtypes(subtypes)) return { isAccepted: false, message: 'Subtypes value is invalid', field: 'subtypes' }
+    //if(chapters && !chapters.every(chapter => config.CHAPTERS.includes(chapter))) return { isAccepted: false, message: 'Chapters value is invalid', field: 'chapters' }
+
+    if(type && !config.EXAM_TYPES.includes(type)) return { isAccepted: false, message: 'Type value is invalid', field: 'type' }
+
+    if(subtype && !config.EXAM_SUBTYPES.includes(subtype)) return { isAccepted: false, message: 'Subtype value is invalid', field: 'subtype' }
 
     if(description && typeof description != 'string') return { isAccepted: false, message: 'Description format is invalid', field: 'description' }
 
@@ -43,18 +47,22 @@ const addExam = (examData) => {
 
 const updateExam = (examData) => {
 
-    const { name, types, subtypes, description, isActive, academicYear, duration, totalMarks, date } = examData
+    const { name, groups, chapters, type, subtype, description, isActive, academicYear, duration, totalMarks, date } = examData
 
 
     if(name && typeof name != 'string') return { isAccepted: false, message: 'Name format is invalid', field: 'name' }
 
-    if(types && !Array.isArray(types)) return { isAccepted: false, message: 'Types format is invalid', field: 'types' }
+    if(groups && !Array.isArray(groups)) return { isAccepted: false, message: 'Groups format is invalid', field: 'groups' }
 
-    if(types && !utils.isValidTypes(types)) return { isAccepted: false, message: 'Types value is invalid', field: 'types' }
+    if(groups && !groups.every(groupId => utils.isObjectId(groupId))) return { isAccepted: false, message: 'Groups value is invalid', field: 'groups' }
 
-    if(subtypes && !Array.isArray(subtypes)) return { isAccepted: false, message: 'Subtypes format is invalid', field: 'subtypes' }
+    //if(chapters && !Array.isArray(chapters)) return { isAccepted: false, message: 'Chapters format is invalid', field: 'chapters' }
 
-    if(subtypes && !utils.isValidSubtypes(subtypes)) return { isAccepted: false, message: 'Subtypes value is invalid', field: 'subtypes' }
+    //if(chapters && !chapters.every(chapter => config.CHAPTERS.includes(chapter))) return { isAccepted: false, message: 'Chapters value is invalid', field: 'chapters' }
+
+    if(type && !config.EXAM_TYPES.includes(type)) return { isAccepted: false, message: 'Type value is invalid', field: 'type' }
+
+    if(subtype && !config.EXAM_SUBTYPES.includes(subtype)) return { isAccepted: false, message: 'Subtype value is invalid', field: 'subtype' }
 
     if(description && typeof description != 'string') return { isAccepted: false, message: 'Description format is invalid', field: 'description' }
 
@@ -83,4 +91,15 @@ const updateExamURL = (examData) => {
     return { isAccepted: true, message: 'data is valid', data: examData }
 }
 
-module.exports = { addExam, updateExam, updateExamURL }
+const updateExamAnswerURL = (examData) => {
+
+    const { answerURL } = examData
+
+    if(!answerURL) return { isAccepted: false, message: 'Answer URL is required', field: 'answerURL' }
+
+    if(!utils.isValidURL(answerURL)) return { isAccepted: false, message: 'Answer URL format is invalid', field: 'answerURL' }
+
+    return { isAccepted: true, message: 'data is valid', data: examData }
+}
+
+module.exports = { addExam, updateExam, updateExamURL, updateExamAnswerURL }

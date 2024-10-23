@@ -149,8 +149,8 @@ const allPermission = (request, response, next) => {
 
     try {
 
-        const authorizedRoles = ['EMPLOYEE']
-        const types = ['EMPLOYEE', 'ADMIN']
+        const authorizedRoles = ['EMPLOYEE', 'TEACHER']
+        const types = ['EMPLOYEE', 'ADMIN', 'TEACHER']
 
         verifyToken(request, response, () => {
 

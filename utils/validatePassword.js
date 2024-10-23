@@ -7,12 +7,12 @@ const isPasswordStrong = (password) => {
     const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
     
     if (password.length < minLength) {
-      return { isAccepted: false, message: 'Weak: Password should be at least 8 characters long' }
+      return { isAccepted: false, message: 'ضعيف: يجب أن تتكون كلمة المرور من 8 أحرف على الأقل' }
     } else if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecialChar) {
-      return { isAccepted: false, message: 'Medium: Password should include uppercase, lowercase, numbers, and special characters' }
+      return { isAccepted: false, message: 'متوسط: يجب أن تتضمن كلمة المرور أحرف كبيرة وصغيرة وأرقاما وأحرفا خاصة' }
     }
     
-    return { isAccepted: true, message: 'Strong: Password meets the criteria for a strong password' }
+    return { isAccepted: true, message: 'قوي: كلمة المرور تفي بمعايير كلمة المرور القوية' }
 }
 
 module.exports = { isPasswordStrong }

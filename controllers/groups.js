@@ -1,8 +1,12 @@
 const GroupModel = require('../models/GroupModel')
+const GradeModel = require('../models/GradeModel')
+const StudentModel = require('../models/StudentModel')
+const ExamModel = require('../models/ExamModel')
 const CounterModel = require('../models/CounterModel')
 const groupValidation = require('../validations/groups')
 const utils = require('../utils/utils')
 const config = require('../config/config')
+const mongoose = require('mongoose')
 const UserModel = require('../models/UserModel')
 
 
@@ -207,6 +211,33 @@ const deleteGroup = async (request, response) => {
     try {
 
         const { groupId } = request.params
+
+        const totalGrades = await GradeModel.countDocuments({ groupId })
+        if(totalGrades != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك درجات مسجلة في هذا المجموعة',
+                field: 'groupId'
+            })
+        }
+
+        const totalStudents = await StudentModel.countDocuments({ groupId })
+        if(totalStudents != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك طلاب مسجلين في هذا المجموعة',
+                field: 'groupId'
+            })
+        }
+
+        const totalExams = await ExamModel.countDocuments({ groups: { $in: [mongoose.Types.ObjectId(groupId)] } })
+        if(totalExams != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك اختبارات مسجلة في هذا المجموعة',
+                field: 'groupId'
+            })
+        }
 
         const deletedGroup = await GroupModel.findByIdAndDelete(groupId)
 
