@@ -31,4 +31,11 @@ router.delete(
     (request, response) => studentsController.deleteStudent(request, response)
 )
 
+router.patch(
+    '/v1/students/:studentId/telegram-ID',
+    authorization.allPermission,
+    verifyStudentId,
+    (request, response) => studentsController.removeTelegramID(request, response)
+)
+
 module.exports = router

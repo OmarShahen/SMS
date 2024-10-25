@@ -6,6 +6,7 @@ const gradeValidation = require('../validations/grades')
 const utils = require('../utils/utils')
 const config = require('../config/config')
 const mongoose = require('mongoose')
+const { telegramBot }  = require('../bot/telegram-bot')
 
 
 const getUserGrades = async (request, response) => {
@@ -161,6 +162,7 @@ const addGrade = async (request, response) => {
             })
         }
 
+        const { isNotify } = request.query
         const { userId, studentId, examId, correctorId, score } = request.body
 
         const userPromise = UserModel.findById(userId)
@@ -228,6 +230,11 @@ const addGrade = async (request, response) => {
         const gradeObj = new GradeModel(gradeData)
         const newGrade = await gradeObj.save()
 
+        if(isNotify == 'TRUE' && student.telegramId) {
+            const gradeMessage = `مرحبًا ${student.name}، نتيجتك في امتحان ${exam.name} هي ${newGrade.score} من ${exam.totalMarks}`
+            telegramBot.sendMessage(student.telegramId, gradeMessage)
+        }
+
         return response.status(200).json({
             accepted: true,
             message: 'تم اضافة الدرجة بنجاح',
@@ -277,6 +284,16 @@ const updateGrade = async (request, response) => {
         const updatedGrade = await GradeModel
         .findByIdAndUpdate(gradeId, request.body, { new: true })
 
+        const student = await StudentModel.findById(updatedGrade.studentId)
+
+        if(student.telegramId) {
+
+            const exam = await ExamModel.findById(updatedGrade.examId)
+            const gradeMessage = `مرحبًا ${student.name}، نتيجتك في امتحان ${exam.name} هي ${updatedGrade.score} من ${exam.totalMarks}`
+
+            telegramBot.sendMessage(student.telegramId, gradeMessage)   
+        }
+
         return response.status(200).json({
             accepted: true,
             message: 'تم تحديث الدرجة بنجاح',
@@ -317,5 +334,44 @@ const deleteGrade = async (request, response) => {
     }
 }
 
+const notifyGrade = async (request, response) => {
 
-module.exports = { getUserGrades, getStudentsThatAreGraded, addGrade, updateGrade, deleteGrade }
+    try {
+
+        const { gradeId } = request.params
+
+        const grade = await GradeModel.findById(gradeId)
+
+        const student = await StudentModel.findById(grade.studentId)
+
+        if(!student.telegramId) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'الطالب غير مسجل في البوت',
+                field: 'gradeId'
+            })
+        }
+
+        const exam = await ExamModel.findById(grade.examId)
+
+        const gradeMessage = `مرحبًا ${student.name}، نتيجتك في امتحان ${exam.name} هي ${grade.score} من ${exam.totalMarks}`
+
+        telegramBot.sendMessage(student.telegramId, gradeMessage)
+
+        return response.status(200).json({
+            accepted: true,
+            message: 'تم ارسال التنبيه'
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+
+module.exports = { getUserGrades, getStudentsThatAreGraded, addGrade, updateGrade, deleteGrade, notifyGrade }

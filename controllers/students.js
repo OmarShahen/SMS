@@ -298,6 +298,40 @@ const deleteStudent = async (request, response) => {
     }
 }
 
+const removeTelegramID = async (request, response) => {
+
+    try {
+
+        const { studentId } = request.params
+
+        const student = await StudentModel.findById(studentId)
+
+        if(!student.telegramId) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'الطالب غير مسجل في التليجرام',
+                field: 'studentId'
+            })
+        }
+
+        const updatedStudent = await StudentModel
+        .findByIdAndUpdate(studentId, { telegramId: null }, { new: true })
+
+        return response.status(200).json({
+            accepted: true,
+            message: 'تم مسح اشتراك التليجرام بنجاح',
+            student: updatedStudent
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
 
 
-module.exports = { getUserStudents, addStudent, updateStudent, deleteStudent }
+module.exports = { getUserStudents, addStudent, updateStudent, deleteStudent, removeTelegramID }

@@ -38,5 +38,11 @@ router.delete(
     (request, response) => gradesController.deleteGrade(request, response)
 )
 
+router.post(
+    '/v1/grades/:gradeId/notify',
+    authorization.allPermission,
+    verifyGradeId,
+    (request, response) => gradesController.notifyGrade(request, response)
+)
 
 module.exports = router

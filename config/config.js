@@ -1,8 +1,9 @@
 module.exports = {
     APP_NAME: `NZAMY`,
     PORT: process.env.APP_PORT,
-    //DB_URL: process.env.PROD_DB_URL,
-    DB_URL: process.env.DB_URL,
+    DB_URL: process.env.PROD_DB_URL,
+    //DB_URL: process.env.DB_URL,
+    TELEGRAM_WEBHOOK: `https://app-tltqayhmna-uc.a.run.app/bot${process.env.TELEGRAM_TOKEN}`,
     SUPPORT_NUMBER: '+201555415331',
     GENDER: ['MALE', 'FEMALE'],
     ROLES: ['OWNER', 'DOCTOR', 'STAFF', 'TEACHER'],
