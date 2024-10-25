@@ -1,5 +1,5 @@
 module.exports = {
-    APP_NAME: `NZAMY`,
+    APP_NAME: `RA'AYA-SMS`,
     PORT: process.env.APP_PORT,
     DB_URL: process.env.PROD_DB_URL,
     //DB_URL: process.env.DB_URL,

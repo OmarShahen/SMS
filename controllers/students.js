@@ -7,13 +7,15 @@ const studentValidation = require('../validations/students')
 const utils = require('../utils/utils')
 const config = require('../config/config')
 const mongoose = require('mongoose')
+const { telegramBot } = require('../bot/telegram-bot')
+
 
 const getUserStudents = async (request, response) => {
 
     try {
 
         const { userId } = request.params
-        let { groupId, name, phone, gender, referredBy, isActive, academicYear, limit, page } = request.query
+        let { groupId, name, phone, gender, referredBy, isActive, academicYear, isTelegram, limit, page } = request.query
 
         let { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -44,6 +46,15 @@ const getUserStudents = async (request, response) => {
 
         if(academicYear) {
             searchQuery.academicYear = academicYear
+        }
+
+        if(isTelegram == 'TRUE') {
+            searchQuery.telegramId = { $exists: true, $ne: null }
+        } else if(isTelegram == 'FALSE') {
+            searchQuery.$or =  [
+                { telegramId: { $exists: false } },
+                { telegramId: null }
+            ]
         }
 
         if(gender) {
@@ -114,7 +125,6 @@ const getUserStudents = async (request, response) => {
         })
     }
 }
-
 
 const addStudent = async (request, response) => {
 
@@ -316,6 +326,8 @@ const removeTelegramID = async (request, response) => {
 
         const updatedStudent = await StudentModel
         .findByIdAndUpdate(studentId, { telegramId: null }, { new: true })
+
+        telegramBot.sendMessage(student.telegramId, `تم تسجيل خروج حساب ${student.name}`)
 
         return response.status(200).json({
             accepted: true,
