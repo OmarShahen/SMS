@@ -1,17 +1,17 @@
 const utils = require('../utils/utils')
-
+const config = require('../config/config')
 
 const addAssignment = (assignmentData) => {
 
-    const { userId, groupId, title, description, isActive, totalMarks, dueDate } = assignmentData
+    const { userId, groups, title, description, isActive, totalMarks, dueDate, academicYear } = assignmentData
 
     if(!userId) return { isAccepted: false, message: 'User ID is required', field: 'userId' }
 
     if(!utils.isObjectId(userId)) return { isAccepted: false, message: 'User ID format is invalid', field: 'userId' }
 
-    if(!groupId) return { isAccepted: false, message: 'Group ID is required', field: 'groupId' }
+    if(!Array.isArray(groups) || groups.length == 0) return { isAccepted: false, message: 'Groups format is invalid', field: 'groups' }
 
-    if(!utils.isObjectId(groupId)) return { isAccepted: false, message: 'Group ID format is invalid', field: 'groupId' }
+    if(!groups.every(groupId => utils.isObjectId(groupId))) return { isAccepted: false, message: 'Groups value is invalid', field: 'groups' }
 
     if(!title) return { isAccepted: false, message: 'Title is required', field: 'title' }
 
@@ -29,13 +29,23 @@ const addAssignment = (assignmentData) => {
 
     if(!utils.isDateTimeValid(dueDate)) return { isAccepted: false, message: 'Due date format is invalid', field: 'dueDate' }
 
+    if(!academicYear) return { isAccepted: false, message: 'Academic year is required', field: 'academicYear' }
+
+    if(typeof academicYear != 'string') return { isAccepted: false, message: 'Academic year format is invalid', field: 'academicYear' }
+
+    if(!config.ACADEMIC_YEARS.includes(academicYear)) return { isAccepted: false, message: 'Academic year value is invalid', field: 'academicYear' }
+
 
     return { isAccepted: true, message: 'data is valid', data: assignmentData }
 }
 
 const updateAssignment = (assignmentData) => {
 
-    const { title, description, isActive, totalMarks, dueDate } = assignmentData
+    const { groups, title, description, isActive, totalMarks, dueDate, academicYear } = assignmentData
+
+    if(groups && !Array.isArray(groups)) return { isAccepted: false, message: 'Groups format is invalid', field: 'groups' }
+
+    if(groups && !groups.every(groupId => utils.isObjectId(groupId))) return { isAccepted: false, message: 'Groups value is invalid', field: 'groups' }
 
     if(title && typeof title != 'string') return { isAccepted: false, message: 'Title format is invalid', field: 'title' }
 
@@ -47,6 +57,7 @@ const updateAssignment = (assignmentData) => {
 
     if(dueDate && !utils.isDateTimeValid(dueDate)) return { isAccepted: false, message: 'Due date format is invalid', field: 'dueDate' }
 
+    if(academicYear && !config.ACADEMIC_YEARS.includes(academicYear)) return { isAccepted: false, message: 'Academic year value is invalid', field: 'academicYear' }
 
     return { isAccepted: true, message: 'data is valid', data: assignmentData }
 }

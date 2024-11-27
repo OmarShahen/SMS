@@ -11,18 +11,65 @@ const checkSpeciality = (specialities) => {
     return true
 }
 
+const isObject = (value) => {
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+const validateModuleFields = (moduleObj, moduleName) => {
+
+    const { isCreate, isRead, isUpdate, isDelete } = moduleObj
+
+    if(!moduleObj) return { isAccepted: false, message: 'Module is required', field: 'module' }
+
+    if(!isObject(moduleObj)) return { isAccepted: false, message: 'Module format is invalid', field: 'module' }
+
+    if(typeof isCreate != 'boolean') return { isAccepted: false, message: `isCreate of ${moduleName} format is invalid`, field: `${moduleName}.isCreate` } 
+
+    if(typeof isRead != 'boolean') return { isAccepted: false, message: `isRead of ${moduleName} format is invalid`, field: `${moduleName}.isRead` } 
+
+    if(typeof isUpdate != 'boolean') return { isAccepted: false, message: `isUpdate of ${moduleName} format is invalid`, field: `${moduleName}.isUpdate` } 
+
+    if(typeof isDelete != 'boolean') return { isAccepted: false, message: `isDelete of ${moduleName} format is invalid`, field: `${moduleName}.isDelete` } 
+
+    return { isAccepted: true, message: 'data is valid', data: moduleObj }
+}
+
+const validateModules = (modules) => {
+
+    const { students, groups, subscriptions, payments, shifts, attendances, exams, grades, assignments } = modules
+
+    const studentsValidation = validateModuleFields(students, 'students')
+    const groupsValidation = validateModuleFields(groups, 'groups')
+    const subscriptionsValidation = validateModuleFields(subscriptions, 'subscriptions')
+    const paymentsValidation = validateModuleFields(payments, 'payments')
+    const shiftsValidation = validateModuleFields(shifts, 'shifts')
+    const attendancesValidation = validateModuleFields(attendances, 'attendances')
+    const examsValidation = validateModuleFields(exams, 'exams')
+    const gradesValidation = validateModuleFields(grades, 'grades')
+    const assignmentsValidation = validateModuleFields(assignments, 'assignments')
+
+    if(!studentsValidation.isAccepted) return studentsValidation
+    if(!groupsValidation.isAccepted) return studentsValidation
+    if(!subscriptionsValidation.isAccepted) return studentsValidation
+    if(!paymentsValidation.isAccepted) return studentsValidation
+    if(!shiftsValidation.isAccepted) return studentsValidation
+    if(!attendancesValidation.isAccepted) return studentsValidation
+    if(!examsValidation.isAccepted) return studentsValidation
+    if(!gradesValidation.isAccepted) return studentsValidation
+    if(!assignmentsValidation.isAccepted) return studentsValidation
+
+    return { isAccepted: true, message: 'data is valid', data: modules }
+
+}
+
 const updateUserMainData = (userData) => {
 
-    const { firstName, phone, gender, dateOfBirth } = userData
+    const { firstName, sessionPrice } = userData
 
 
     if(firstName && !utils.isNameValid(firstName)) return { isAccepted: false, message: 'Invalid name formate', field: 'firstName' }
 
-    if(phone && typeof phone != 'number') return { isAccepted: false, message: 'Invalid phone format', field: 'phone' }
-
-    if(gender && !config.GENDER.includes(gender)) return { isAccepted: false, message: 'Invalid gender', field: 'gender' }
-
-    if(dateOfBirth && !utils.isDateValid(dateOfBirth)) return { isAccepted: false, message: 'Date of birth format is invalid', field: 'dateOfBirth' }
+    if(sessionPrice && typeof sessionPrice != 'number') return { isAccepted: false, message: 'Session price format is invalid', field: 'sessionPrice' }
 
 
     return { isAccepted: true, message: 'data is valid', data: userData }
@@ -68,7 +115,6 @@ const updateUserActivation = (userData) => {
 
     return { isAccepted: true, message: 'data is valid', data: userData }
 }
-
 
 const updateUserSpeciality = (userData) => {
 
@@ -136,37 +182,62 @@ const verifyAndUpdateUserPassword = (userData) => {
 
 const addEmployeeUser = (userData) => {
 
-    const { firstName, lastName, email, password, countryCode, phone, gender } = userData
+    const { ownerId, firstName, email, password, isBlocked, modules } = userData
+
+    if(!ownerId) return { isAccepted: false, message: 'Owner ID is required', field: 'ownerId' }
+
+    if(!utils.isObjectId(ownerId)) return { isAccepted: false, message: 'Owner ID is required', field: 'ownerId' }
 
     if(!firstName) return { isAccepted: false, message: 'First name is required', field: 'firstName' }
 
     if(!utils.isNameValid(firstName)) return { isAccepted: false, message: 'Invalid name formate', field: 'firstName' }
 
-    if(!lastName) return { isAccepted: false, message: 'Last name is required', field: 'lastName' }
+    if(!email) return { isAccepted: false, message: 'Email is required', field: 'email' }
 
-    if(!utils.isNameValid(lastName)) return { isAccepted: false, message: 'Invalid name formate', field: 'lastName' }
+    if(!utils.isEmailValid(email)) return { isAccepted: false, message: 'Email formate is invalid', field: 'email' }
+
+    if(!password) return { isAccepted: false, message: 'Password is required', field: 'password' }
+
+    if(typeof isBlocked != 'boolean') return { isAccepted: false, message: 'isBlocked format is invalid', field: 'isBlocked' }
+
+    if(!modules) return { isAccepted: false, message: 'Modules is required', field: 'modules' }
+
+    if(!isObject(modules)) return { isAccepted: false, message: 'Modules format is invalid', field: 'modules' }
+
+    const moduleValidation = validateModules(modules)
+
+    if(!moduleValidation.isAccepted) return moduleValidation
+
+
+    return { isAccepted: true, message: 'data is valid', data: userData }
+} 
+
+const updateEmployeeUser = (userData) => {
+
+    const { firstName, email, isBlocked, modules } = userData
+
+    if(!firstName) return { isAccepted: false, message: 'First name is required', field: 'firstName' }
+
+    if(!utils.isNameValid(firstName)) return { isAccepted: false, message: 'Invalid name formate', field: 'firstName' }
 
     if(!email) return { isAccepted: false, message: 'Email is required', field: 'email' }
 
     if(!utils.isEmailValid(email)) return { isAccepted: false, message: 'Email formate is invalid', field: 'email' }
 
-    if(!countryCode) return { isAccepted: false, message: 'Country code is required', field: 'countryCode' }
+    if(typeof isBlocked != 'boolean') return { isAccepted: false, message: 'isBlocked format is invalid', field: 'isBlocked' }
 
-    if(typeof countryCode != 'number') return { isAccepted: false, message: 'Country code format is invalid', field: 'countryCode' }
+    if(!modules) return { isAccepted: false, message: 'Modules is required', field: 'modules' }
 
-    if(!phone) return { isAccepted: false, message: 'Phone is required', field: 'phone' }
+    if(!isObject(modules)) return { isAccepted: false, message: 'Modules format is invalid', field: 'modules' }
 
-    if(typeof phone != 'number') return { isAccepted: false, message: 'Phone format is invalid', field: 'phone' }
+    const moduleValidation = validateModules(modules)
 
-    if(!password) return { isAccepted: false, message: 'Password is required', field: 'password' }
-
-    if(!gender) return { isAccepted: false, message: 'Gender is required', field: 'gender' }
-
-    if(!config.GENDER.includes(gender)) return { isAccepted: false, message: 'Invalid gender', field: 'gender' }
+    if(!moduleValidation.isAccepted) return moduleValidation
 
 
     return { isAccepted: true, message: 'data is valid', data: userData }
 } 
+
 
 
 module.exports = { 
@@ -178,6 +249,7 @@ module.exports = {
     verifyAndUpdateUserPassword,
     updateUserSpeciality,
     addEmployeeUser,
+    updateEmployeeUser,
     updateUserActivation,
     updateUserVisibility,
     updateUserBlocked

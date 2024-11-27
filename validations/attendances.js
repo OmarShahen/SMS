@@ -3,7 +3,7 @@ const config = require('../config/config')
 
 const addAttendance = (attendanceData) => {
 
-    const { userId, studentId, shiftId, recorderId, status } = attendanceData
+    const { userId, studentId, shiftId, recorderId, groupId, status, academicYear } = attendanceData
 
     if(!userId) return { isAccepted: false, message: 'User ID is required', field: 'userId' }
 
@@ -21,10 +21,20 @@ const addAttendance = (attendanceData) => {
 
     if(!utils.isObjectId(recorderId)) return { isAccepted: false, message: 'Recorder ID format is invalid', field: 'recorderId' }
 
+    if(!groupId) return { isAccepted: false, message: 'Group ID is required', field: 'groupId' }
+
+    if(!utils.isObjectId(groupId)) return { isAccepted: false, message: 'Group ID format is invalid', field: 'groupId' }
+
     if(!status) return { isAccepted: false, message: 'Status is required', field: 'status' }
 
     if(!config.ATTENDANCE_STATUS.includes(status)) return { isAccepted: false, message: 'Status value is invalid', field: 'status' }
     
+    if(!academicYear) return { isAccepted: false, message: 'Academic year is required', field: 'academicYear' }
+
+    if(typeof academicYear != 'string') return { isAccepted: false, message: 'Academic year format is invalid', field: 'academicYear' }
+
+    if(!config.ACADEMIC_YEARS.includes(academicYear)) return { isAccepted: false, message: 'Academic year value is invalid', field: 'academicYear' }
+
 
     return { isAccepted: true, message: 'data is valid', data: attendanceData }
 }

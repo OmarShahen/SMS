@@ -12,12 +12,19 @@ router.get(
 )
 
 router.get(
+    '/v1/users/:userId/employees',
+    authorization.allPermission, 
+    verifyUserId, 
+    (request, response) => usersController.getOwnerUsers(request, response)
+)
+
+
+router.get(
     '/v1/users/:userId/types/patients',
     authorization.allPermission, 
     verifyUserId,
     (request, response) => usersController.getPatient(request, response)
 )
-
 
 router.get(
     '/v1/users/:userId/experts',
@@ -98,6 +105,13 @@ router.post(
     '/v1/users/employee',
     authorization.allPermission,
     (request, response) => usersController.addEmployeeUser(request, response)
+)
+
+router.put(
+    '/v1/users/employee/:userId',
+    authorization.allPermission,
+    verifyUserId,
+    (request, response) => usersController.updateEmployeeUser(request, response)
 )
 
 router.patch(

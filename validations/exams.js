@@ -68,7 +68,7 @@ const updateExam = (examData) => {
 
     if(typeof isActive != 'boolean') return { isAccepted: false, message: 'isActive format is invalid', field: 'isActive' }
 
-    //if(academicYear && !config.ACADEMIC_YEARS.includes(academicYear)) return { isAccepted: false, message: 'Academic year value is invalid', field: 'academicYear' }
+    if(academicYear && !config.ACADEMIC_YEARS.includes(academicYear)) return { isAccepted: false, message: 'Academic year value is invalid', field: 'academicYear' }
 
     if(duration && typeof duration != 'number') return { isAccepted: false, message: 'Duration format is invalid', field: 'duration' }
 

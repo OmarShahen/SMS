@@ -1,11 +1,21 @@
 const config = require('../config/config')
 const UserModel = require('../models/UserModel')
+const StudentModel = require('../models/StudentModel')
+const ExamModel = require('../models/ExamModel')
+const GradeModel = require('../models/GradeModel')
+const AssignmentModel = require('../models/AssignmentModel')
+const AttendanceModel = require('../models/AttendanceModel')
+const ShiftModel = require('../models/ShiftModel')
+const PaymentModel = require('../models/PaymentModel')
+const SubscriptionModel = require('../models/SubscriptionModel')
+const GroupModel = require('../models/GroupModel')
 const CounterModel = require('../models/CounterModel')
 const userValidation = require('../validations/users')
 const bcrypt = require('bcrypt')
 const mongoose = require('mongoose')
-const SpecialityModel = require('../models/SpecialityModel')
 const translations = require('../i18n/index')
+const utils = require('../utils/utils')
+
 
 const getUser = async (request, response) => {
 
@@ -48,6 +58,64 @@ const getUser = async (request, response) => {
         return response.status(200).json({
             accepted: true,
             user: userList[0]
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+const getOwnerUsers = async (request, response) => {
+
+    try {
+
+        const { userId } = request.params
+        let { name, limit, page } = request.query
+
+        let { searchQuery } = utils.statsQueryGenerator('ownerId', userId, request.query)
+
+        limit = limit ? Number.parseInt(limit) : config.PAGINATION_LIMIT
+        page = page ? Number.parseInt(page) : 1
+
+        const skip = (page - 1) * limit
+
+        if(name) {
+            searchQuery.firstName = { $regex: name, $options: 'i' }
+        }
+
+        const users = await UserModel.aggregate([
+            {
+                $match: searchQuery
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $skip: skip
+            },
+            {
+                $limit: limit
+            },
+            {
+                $project: {
+                    'user.password': 0,
+                }
+            }
+        ])
+
+        const totalUsers = await UserModel.countDocuments(searchQuery)
+
+        return response.status(200).json({
+            accepted: true,
+            totalUsers,
+            users
         })
 
     } catch(error) {
@@ -157,7 +225,6 @@ const getUserSpeciality = async (request, response) => {
         })
     }
 }
-
 
 const updateUserMainData = async (request, response) => {
 
@@ -489,13 +556,84 @@ const deleteUser = async (request, response) => {
 
         const { userId } = request.params
 
-        const user = await UserModel.findById(userId)
-
-        if(user.roles.includes('DOCTOR') || user.roles.includes('OWNER')) {
+        const totalGroups = await GroupModel.countDocuments({ userId })
+        if(totalGroups != 0) {
             return response.status(400).json({
                 accepted: false,
-                message: `This user type cannot be deleted`,
+                message: 'هناك مجموعات مسجلة في هذا المستخدم',
                 field: 'userId'
+            })
+        }
+
+        const totalSubscriptions = await SubscriptionModel.countDocuments({ userId })
+        if(totalSubscriptions != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك اشتراكات مسجلة في هذا المستخدم',
+                field: 'userId'
+            })
+        }
+
+        const totalPayments = await PaymentModel.countDocuments({ userId })
+        if(totalPayments != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك مدفوعات مسجلة في هذا المستخدم',
+                field: 'userId'
+            })
+        }
+
+        const totalShifts = await ShiftModel.countDocuments({ userId })
+        if(totalShifts != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك ورديات تسجيل مسجلة في هذا المستخدم',
+                field: 'userId'
+            })
+        }
+
+        const totalAttendances = await AttendanceModel.countDocuments({ userId })
+        if(totalAttendances != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك حضور مسجل في هذا المستخدم',
+                field: 'userId'
+            })
+        }
+
+        const totalGrades = await GradeModel.countDocuments({ userId })
+        if(totalGrades != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك درجات مسجلة في هذا المستخدم',
+                field: 'userId'
+            })
+        }
+
+        const totalAssignments = await AssignmentModel.countDocuments({ userId })
+        if(totalAssignments != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك واجبات مسجلة في هذا المستخدم',
+                field: 'userId'
+            })
+        }
+
+        const totalStudents = await StudentModel.countDocuments({ userId })
+        if(totalStudents != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك طلاب مسجلين في هذا المستخدم',
+                field: 'userId'
+            })
+        }
+
+        const totalExams = await ExamModel.countDocuments({ userId })
+        if(totalExams != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك اختبارات مسجلة في هذا المستخدم',
+                field: 'groupId'
             })
         }
 
@@ -503,7 +641,7 @@ const deleteUser = async (request, response) => {
 
         return response.status(200).json({
             accepted: true,
-            message: 'user deleted successfully!',
+            message: 'تم مسح المستخدم بنجاح',
             user: deleteUser
         })
 
@@ -530,14 +668,23 @@ const addEmployeeUser = async (request, response) => {
             })
         }
 
-        const { email, password } = request.body
+        const { ownerId, email, password } = request.body
+
+        const owner = await UserModel.findById(ownerId)
+        if(!owner) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'Owner ID is not registered',
+                field: 'ownerId'
+            })
+        }
 
         const emailList = await UserModel.find({ email, isVerified: true })
 
         if(emailList.length != 0) {
             return response.status(400).json({
                 accepted: false,
-                message: 'Email is already registered',
+                message: 'البريد مسجل مسبقل',
                 field: 'email'
             })
         }
@@ -552,19 +699,66 @@ const addEmployeeUser = async (request, response) => {
 
         const userData = { 
             userId: counter.value,
-            isEmployee: true, 
             isVerified: true, 
             ...request.body,
             password: userPassword,
-            roles: ['EMPLOYEE'],
+            type: 'EMPLOYEE',
         }
         const userObj = new UserModel(userData)
         const newUser = await userObj.save()
 
         return response.status(200).json({
             accepted: true,
-            message: 'User with employee roles is added successfully!',
+            message: '!تم اضافة مستخدم بنجاح',
             user: newUser
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+const updateEmployeeUser = async (request, response) => {
+
+    try {
+
+        const dataValidation = userValidation.updateEmployeeUser(request.body)
+        if(!dataValidation.isAccepted) {
+            return response.status(400).json({
+                accepted: dataValidation.isAccepted,
+                message: dataValidation.message,
+                field: dataValidation.field
+            })
+        }
+        
+        const { userId } = request.params
+        const { email } = request.body
+
+        const user = await UserModel.findById(userId)
+
+        if(user.email != email) {
+            const emailList = await UserModel.find({ email, isVerified: true })
+            if(emailList.length != 0) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'البريد مسجل مسبقل',
+                    field: 'email'
+                })
+            }
+        }
+
+        const updatedUser = await UserModel
+        .findByIdAndUpdate(userId, request.body, { new: true })
+
+        return response.status(200).json({
+            accepted: true,
+            message: '!تم تحديث المستخدم بنجاح',
+            user: updatedUser
         })
 
     } catch(error) {
@@ -693,6 +887,7 @@ const updateUserActivation = async (request, response) => {
 
 module.exports = { 
     getUser,
+    getOwnerUsers,
     getExpertUser,
     getAppUsers,
     getUserSpeciality,
@@ -705,6 +900,7 @@ module.exports = {
     verifyAndUpdateUserPassword,
     deleteUser,
     addEmployeeUser,
+    updateEmployeeUser,
     updateUserVisibility,
     updateUserBlocked,
     updateUserActivation

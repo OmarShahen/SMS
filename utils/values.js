@@ -1,9 +1,5 @@
+
 const ACADEMIC_YEARS = {
-    "GRADE 1 KINDERGARTEN": "الروضة 1",
-    "GRADE 2 KINDERGARTEN": "الروضة 2",
-    "GRADE 1 PRIMARY": "الصف الأول الابتدائي",
-    "GRADE 2 PRIMARY": "الصف الثاني الابتدائي" ,
-    "GRADE 3 PRIMARY": "الصف الثالث الابتدائي",
     "GRADE 4 PRIMARY": "الصف الرابع الابتدائي",
     "GRADE 5 PRIMARY": "الصف الخامس الابتدائي",
     "GRADE 6 PRIMARY": "الصف السادس الابتدائي",
@@ -66,4 +62,28 @@ const EXAM_SUBTYPES = {
     "TAKE-HOME": "امتحان منزلي"
 }
 
-module.exports = { ACADEMIC_YEARS } 
+const SUBSCRIPTION_STATUS = {
+    'ACTIVE': 'نشط', 
+    'EXPIRED': 'منتهي', 
+    'CANCELLED': 'ملغي'
+}
+
+const ATTENDANCE_STATUS = {
+    'PRESENT': 'حضر', 
+    'ABSENT': 'غائب', 
+    'EXCUSED': 'معتذر'
+}
+
+const SUBMISSION_STATUS = {
+    'PENDING': 'قيد الانتظار', 
+    'SUBMITTED': 'تم التسليم',
+    'UNSUBMITTED': 'لم يسلم'
+}
+
+const PAYMENT_METHODS = {
+    'CASH': 'كاش', 
+    'CARD': 'بطاقات الدفع', 
+    'E-WALLET': 'محفظة الكترونية'
+}
+
+module.exports = { ACADEMIC_YEARS, SUBSCRIPTION_STATUS, ATTENDANCE_STATUS, PAYMENT_METHODS, SUBMISSION_STATUS, EXAM_TYPES }

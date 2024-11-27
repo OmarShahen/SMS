@@ -11,6 +11,13 @@ router.get(
     (request, response) => shiftsController.getUserShifts(request, response)
 )
 
+router.get(
+    '/v1/shifts/:shiftId',
+    authorization.allPermission,
+    verifyShiftId,
+    (request, response) => shiftsController.getShift(request, response)
+)
+
 router.post(
     '/v1/shifts',
     authorization.allPermission,
@@ -29,6 +36,13 @@ router.delete(
     authorization.allPermission,
     verifyShiftId,
     (request, response) => shiftsController.deleteShift(request, response)
+)
+
+router.get(
+    '/v1/analytics/shifts/:shiftId/stats',
+    authorization.allPermission,
+    verifyShiftId,
+    (request, response) => shiftsController.getShiftStats(request, response)
 )
 
 module.exports = router

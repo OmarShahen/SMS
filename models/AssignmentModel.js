@@ -5,7 +5,7 @@ const AssignmentSchema = new mongoose.Schema({
 
     assignmentId: { type: Number, required: true },
     userId: { type: mongoose.Types.ObjectId, required: true },
-    groupId: { type: mongoose.Types.ObjectId, required: true },
+    groups: [mongoose.Types.ObjectId],
     title: { type: String, required: true },
     description: { type: String, required: true },
     isActive: { type: Boolean, required: true },

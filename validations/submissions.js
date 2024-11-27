@@ -47,6 +47,17 @@ const updateSubmission = (submissionData) => {
     return { isAccepted: true, message: 'data is valid', data: submissionData }
 }
 
+const updateSubmissionStatus = (submissionData) => {
+
+    const { status } = submissionData
+
+    if(!status) return { isAccepted: false, message: 'status is required', field: 'status' }
+
+    if(!config.SUBMISSION_STATUS.includes(status)) return { isAccepted: false, message: 'Status value is invalid', field: 'status' }
+    
+    return { isAccepted: true, message: 'data is valid', data: submissionData }
+}
+
 const updateSubmissionURL = (submissionData) => {
 
     const { url } = submissionData
@@ -58,4 +69,4 @@ const updateSubmissionURL = (submissionData) => {
     return { isAccepted: true, message: 'data is valid', data: submissionData }
 }
 
-module.exports = { addSubmission, updateSubmission, updateSubmissionURL }
+module.exports = { addSubmission, updateSubmission, updateSubmissionURL, updateSubmissionStatus }

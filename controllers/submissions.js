@@ -6,6 +6,7 @@ const config = require('../config/config')
 const SubmissionModel = require('../models/SubmissionModel')
 const AssignmentModel = require('../models/AssignmentModel')
 const CounterModel = require('../models/CounterModel')
+const mongoose = require('mongoose')
 
 
 const getUserSubmissions = async (request, response) => {
@@ -23,15 +24,15 @@ const getUserSubmissions = async (request, response) => {
         const skip = (page - 1) * limit
 
         if(studentId) {
-            searchQuery.studentId = studentId
+            searchQuery.studentId = mongoose.Types.ObjectId(studentId)
         }
 
         if(groupId) {
-            searchQuery.groupId = groupId
+            searchQuery.groupId = mongoose.Types.ObjectId(groupId)
         }
 
         if(assignmentId) {
-            searchQuery.assignmentId = assignmentId
+            searchQuery.assignmentId = mongoose.Types.ObjectId(assignmentId)
         }
 
         if(academicYear) {
@@ -121,6 +122,32 @@ const getUserSubmissions = async (request, response) => {
     }
 }
 
+const getStudentsThatSubmittedAssignment = async (request, response) => {
+
+    try {
+
+        const { assignmentId } = request.params
+
+        const submissions = await SubmissionModel
+        .find({ assignmentId })
+        .select('studentId status')
+
+        return response.status(200).json({
+            accepted: true,
+            students: submissions
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+
 const addSubmission = async (request, response) => {
 
     try {
@@ -170,6 +197,15 @@ const addSubmission = async (request, response) => {
             })
         }
 
+        const totalSubmisisons = await SubmissionModel.countDocuments({ studentId, assignmentId })
+        if(totalSubmisisons != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'الطالب لدية تسليم مسجل للواجب',
+                field: 'assignmentId'
+            })
+        }
+
         const counter = await CounterModel.findOneAndUpdate(
             { name: `submission-${userId}` },
             { $inc: { value: 1 } },
@@ -189,6 +225,41 @@ const addSubmission = async (request, response) => {
             accepted: true,
             message: 'تم اضافة استلام الواجب بنجاح',
             submission: newSubmission
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+const updateSubmissionStatusByStudentIdAndAssignmentId = async (request, response) => {
+
+    try {
+
+        const dataValidation = submissionValidation.updateSubmissionStatus(request.body)
+        if(!dataValidation.isAccepted) {
+            return response.status(400).json({
+                accepted: dataValidation.isAccepted,
+                message: dataValidation.message,
+                field: dataValidation.field
+            })
+        }
+
+        const { studentId, assignmentId } = request.params
+        const { status } = request.body
+
+        const updatedSubmission = await SubmissionModel
+        .updateOne({ studentId, assignmentId }, { $set: { status } })
+
+        return response.status(200).json({
+            accepted: true,
+            message: 'تم تحديث الحضور بنجاح',
+            submission: updatedSubmission,
         })
 
     } catch(error) {
@@ -295,4 +366,12 @@ const deleteSubmission = async (request, response) => {
 }
 
 
-module.exports = { getUserSubmissions, addSubmission, updateSubmission, updateSubmissionURL, deleteSubmission }
+module.exports = { 
+    getUserSubmissions, 
+    getStudentsThatSubmittedAssignment, 
+    addSubmission, 
+    updateSubmission, 
+    updateSubmissionStatusByStudentIdAndAssignmentId,
+    updateSubmissionURL, 
+    deleteSubmission 
+}

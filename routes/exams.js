@@ -11,6 +11,13 @@ router.get(
     (request, response) => examsController.getUserExams(request, response)
 )
 
+router.get(
+    '/v1/exams/:examId',
+    authorization.allPermission,
+    verifyExamId,
+    (request, response) => examsController.getExam(request, response)
+)
+
 router.post(
     '/v1/exams',
     authorization.allPermission,

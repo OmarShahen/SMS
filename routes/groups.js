@@ -6,7 +6,7 @@ const { verifyUserId, verifyGroupId } = require('../middlewares/verify-routes-pa
 
 router.get(
     '/v1/groups/users/:userId',
-    authorization.allPermission,
+    //authorization.allPermission,
     verifyUserId,
     (request, response) => groupsController.getUserGroups(request, response)
 )
@@ -29,6 +29,13 @@ router.delete(
     authorization.allPermission,
     verifyGroupId,
     (request, response) => groupsController.deleteGroup(request, response)
+)
+
+router.get(
+    '/v1/groups/:groupId',
+    authorization.allPermission,
+    verifyGroupId,
+    (request, response) => groupsController.getGroup(request, response)
 )
 
 module.exports = router

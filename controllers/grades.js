@@ -14,7 +14,7 @@ const getUserGrades = async (request, response) => {
     try {
 
         const { userId } = request.params
-        let { studentId, examId, correctorId, groupId, academicYear, limit, page } = request.query
+        let { studentId, examId, correctorId, groupId, academicYear, sorting, limit, page } = request.query
 
         const { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -43,14 +43,22 @@ const getUserGrades = async (request, response) => {
             searchQuery.academicYear = academicYear
         }
 
+        const sortQuery = {}
+
+        if(sorting == 'HIGH') {
+            sortQuery.score = -1
+        } else if(sorting == 'LOW') {
+            sortQuery.score = 1
+        } else {
+            sortQuery.createdAt = -1
+        }
+
         const grades = await GradeModel.aggregate([
             {
                 $match: searchQuery
             },
             {
-                $sort: {
-                    createdAt: -1
-                }
+                $sort: sortQuery
             },
             {
                 $skip: skip
@@ -131,12 +139,11 @@ const getStudentsThatAreGraded = async (request, response) => {
 
         const grades = await GradeModel
         .find({ examId })
-
-        const students = grades.map(grade => grade.studentId)
+        .select('studentId score')
 
         return response.status(200).json({
             accepted: true,
-            students
+            students: grades
         })
 
     } catch(error) {
@@ -230,9 +237,14 @@ const addGrade = async (request, response) => {
         const gradeObj = new GradeModel(gradeData)
         const newGrade = await gradeObj.save()
 
+        const gradeMessage = `مرحبًا ${student.name}، نتيجتك في امتحان ${exam.name} هي ${newGrade.score} من ${exam.totalMarks}`
+
         if(isNotify == 'TRUE' && student.telegramId) {
-            const gradeMessage = `مرحبًا ${student.name}، نتيجتك في امتحان ${exam.name} هي ${newGrade.score} من ${exam.totalMarks}`
             telegramBot.sendMessage(student.telegramId, gradeMessage)
+        }
+
+        if(isNotify == 'TRUE' && student.parentTelegramId) {
+            telegramBot.sendMessage(student.parentTelegramId, gradeMessage)
         }
 
         return response.status(200).json({
@@ -286,12 +298,70 @@ const updateGrade = async (request, response) => {
 
         const student = await StudentModel.findById(updatedGrade.studentId)
 
+        const exam = await ExamModel.findById(updatedGrade.examId)
+        const gradeMessage = `مرحبًا ${student.name}، نتيجتك في امتحان ${exam.name} هي ${updatedGrade.score} من ${exam.totalMarks}`
+
         if(student.telegramId) {
-
-            const exam = await ExamModel.findById(updatedGrade.examId)
-            const gradeMessage = `مرحبًا ${student.name}، نتيجتك في امتحان ${exam.name} هي ${updatedGrade.score} من ${exam.totalMarks}`
-
             telegramBot.sendMessage(student.telegramId, gradeMessage)   
+        }
+
+        if(student.parentTelegramId) {
+            telegramBot.sendMessage(student.parentTelegramId, gradeMessage)   
+        }
+
+        return response.status(200).json({
+            accepted: true,
+            message: 'تم تحديث الدرجة بنجاح',
+            grade: updatedGrade,
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+const updateGradeByStudentIdAndExamId = async (request, response) => {
+
+    try {
+
+        const dataValidation = gradeValidation.updateGrade(request.body)
+        if(!dataValidation.isAccepted) {
+            return response.status(400).json({
+                accepted: dataValidation.isAccepted,
+                message: dataValidation.message,
+                field: dataValidation.field
+            })
+        }
+
+        const { studentId, examId } = request.params
+        const { score } = request.body
+
+        const exam = await ExamModel.findById(examId)
+        if(exam.totalMarks < score) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'درجة الطالب اعلي من اجمالي درجات الاختبار',
+                field: 'score'
+            })
+        }
+
+        const updatedGrade = await GradeModel.updateOne({ studentId, examId }, { $set: { score } })
+
+        const student = await StudentModel.findById(studentId)
+
+        const gradeMessage = `مرحبًا ${student.name}، نتيجتك في امتحان ${exam.name} هي ${score} من ${exam.totalMarks}`
+
+        if(student.telegramId) {
+            telegramBot.sendMessage(student.telegramId, gradeMessage)   
+        }
+
+        if(student.parentTelegramId) {
+            telegramBot.sendMessage(student.parentTelegramId, gradeMessage)   
         }
 
         return response.status(200).json({
@@ -374,4 +444,4 @@ const notifyGrade = async (request, response) => {
 }
 
 
-module.exports = { getUserGrades, getStudentsThatAreGraded, addGrade, updateGrade, deleteGrade, notifyGrade }
+module.exports = { getUserGrades, getStudentsThatAreGraded, addGrade, updateGrade, updateGradeByStudentIdAndExamId, deleteGrade, notifyGrade }

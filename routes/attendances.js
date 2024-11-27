@@ -1,7 +1,7 @@
 const router = require('express').Router()
 const attendancesController = require('../controllers/attendances')
 const authorization = require('../middlewares/verify-permission')
-const { verifyUserId, verifyAttendanceId } = require('../middlewares/verify-routes-params')
+const { verifyUserId, verifyAttendanceId, verifyShiftId, verifyStudentId, verifySubscriptionId } = require('../middlewares/verify-routes-params')
 
 
 router.get(
@@ -11,10 +11,24 @@ router.get(
     (request, response) => attendancesController.getUserAttendances(request, response)
 )
 
+router.get(
+    '/v1/attendances/shifts/:shiftId',
+    authorization.allPermission,
+    verifyShiftId,
+    (request, response) => attendancesController.getStudentsThatAttendedInShift(request, response)
+)
+
 router.post(
     '/v1/attendances',
     authorization.allPermission,
     (request, response) => attendancesController.addAttendance(request, response)
+)
+
+router.post(
+    '/v1/attendances/subscriptions/:subscriptionId',
+    authorization.allPermission,
+    verifySubscriptionId,
+    (request, response) => attendancesController.addAttendanceBySubscriptionId(request, response)
 )
 
 router.patch(
@@ -22,6 +36,14 @@ router.patch(
     authorization.allPermission,
     verifyAttendanceId,
     (request, response) => attendancesController.updateAttendanceStatus(request, response)
+)
+
+router.patch(
+    '/v1/attendances/students/:studentId/shifts/:shiftId/status',
+    authorization.allPermission,
+    verifyStudentId,
+    verifyShiftId,
+    (request, response) => attendancesController.updateAttendanceStatusByStudentIdAndShiftId(request, response)
 )
 
 router.delete(

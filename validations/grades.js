@@ -34,7 +34,9 @@ const updateGrade = (gradeData) => {
 
     const { score, note } = gradeData
 
-    if(score && typeof score != 'number') return { isAccepted: false, message: 'Score format is invalid', field: 'score' }
+    if(!score) return { isAccepted: false, message: 'Score is required', field: 'score' }
+
+    if(typeof score != 'number') return { isAccepted: false, message: 'Score format is invalid', field: 'score' }
 
     if(note && typeof note != 'string') return { isAccepted: false, message: 'Note format is invalid', field: 'note' }
 

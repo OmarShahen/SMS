@@ -13,7 +13,7 @@ router.get(
 
 router.post(
     '/v1/students',
-    authorization.allPermission,
+    //authorization.allPermission,
     (request, response) => studentsController.addStudent(request, response)
 )
 

@@ -1,7 +1,7 @@
 const router = require('express').Router()
 const submissionsController = require('../controllers/submissions')
 const authorization = require('../middlewares/verify-permission')
-const { verifyUserId, verifySubmissionId } = require('../middlewares/verify-routes-params')
+const { verifyUserId, verifySubmissionId, verifyAssignmentId, verifyStudentId } = require('../middlewares/verify-routes-params')
 
 
 router.get(
@@ -9,6 +9,21 @@ router.get(
     authorization.allPermission,
     verifyUserId,
     (request, response) => submissionsController.getUserSubmissions(request, response)
+)
+
+router.get(
+    '/v1/submissions/assignments/:assignmentId',
+    authorization.allPermission,
+    verifyAssignmentId,
+    (request, response) => submissionsController.getStudentsThatSubmittedAssignment(request, response)
+)
+
+router.patch(
+    '/v1/submissions/students/:studentId/assignments/:assignmentId/status',
+    authorization.allPermission,
+    verifyStudentId,
+    verifyAssignmentId,
+    (request, response) => submissionsController.updateSubmissionStatusByStudentIdAndAssignmentId(request, response)
 )
 
 router.post(

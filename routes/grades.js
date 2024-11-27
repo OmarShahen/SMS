@@ -1,7 +1,7 @@
 const router = require('express').Router()
 const gradesController = require('../controllers/grades')
 const authorization = require('../middlewares/verify-permission')
-const { verifyUserId, verifyGradeId, verifyExamId } = require('../middlewares/verify-routes-params')
+const { verifyUserId, verifyGradeId, verifyExamId, verifyStudentId } = require('../middlewares/verify-routes-params')
 
 
 router.get(
@@ -29,6 +29,14 @@ router.put(
     authorization.allPermission,
     verifyGradeId,
     (request, response) => gradesController.updateGrade(request, response)
+)
+
+router.put(
+    '/v1/grades/students/:studentId/exams/:examId',
+    authorization.allPermission,
+    verifyStudentId,
+    verifyExamId,
+    (request, response) => gradesController.updateGradeByStudentIdAndExamId(request, response)
 )
 
 router.delete(

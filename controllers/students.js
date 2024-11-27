@@ -8,6 +8,7 @@ const utils = require('../utils/utils')
 const config = require('../config/config')
 const mongoose = require('mongoose')
 const { telegramBot } = require('../bot/telegram-bot')
+const { MENU_MESSAGE } = require('../bot/messages/messages')
 
 
 const getUserStudents = async (request, response) => {
@@ -49,12 +50,9 @@ const getUserStudents = async (request, response) => {
         }
 
         if(isTelegram == 'TRUE') {
-            searchQuery.telegramId = { $exists: true, $ne: null }
+            searchQuery.telegramId = { $ne: null }
         } else if(isTelegram == 'FALSE') {
-            searchQuery.$or =  [
-                { telegramId: { $exists: false } },
-                { telegramId: null }
-            ]
+            searchQuery.telegramId = null
         }
 
         if(gender) {
@@ -97,6 +95,14 @@ const getUserStudents = async (request, response) => {
                 }
             },
             {
+                $lookup: {
+                    from: 'subscriptions',
+                    localField: 'subscriptionId',
+                    foreignField: '_id',
+                    as: 'subscription'
+                }
+            },
+            {
                 $project: {
                     'user.password': 0,
                 }
@@ -106,6 +112,7 @@ const getUserStudents = async (request, response) => {
         students.forEach(student => {
             student.user = student.user[0]
             student.group = student.group[0]
+            student.subscription = student.subscription[0]
         })
 
         const totalStudents = await StudentModel.countDocuments(searchQuery)
@@ -139,7 +146,7 @@ const addStudent = async (request, response) => {
             })
         }
 
-        const { userId, groupId, name, phone } = request.body
+        const { userId, groupId, telegramId, name, phone } = request.body
 
         const user = await UserModel.findById(userId)
         if(!user) {
@@ -159,23 +166,25 @@ const addStudent = async (request, response) => {
             })
         }
 
-        const totalNames = await StudentModel.countDocuments({ userId, groupId, name })
-        if(totalNames != 0) {
-            return response.status(400).json({
-                accepted: false,
-                message: 'اسم الطالب مسجل مسبقا في هذه المجموعة',
-                field: 'name'
-            })
+        if(telegramId) {
+            const totalTelegram = await StudentModel.countDocuments({ userId, telegramId })
+            if(totalTelegram != 0) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'انت مسجل مسبقا علي التليجرام',
+                    field: 'telegramId'
+                })
+            }
         }
 
-        const totalPhones = await StudentModel.countDocuments({ userId, phone })
-        if(totalPhones != 0) {
+        /*const totalGroupStudents = await StudentModel.countDocuments({ groupId })
+        if(group.capacity <= totalGroupStudents) {
             return response.status(400).json({
                 accepted: false,
-                message: 'هاتف الطالب مسجل مسبقا',
-                field: 'phone'
+                message: 'لا يوجد مكان في المجموعة',
+                field: 'groupId'
             })
-        }
+        }*/
 
         const counter = await CounterModel.findOneAndUpdate(
             { name: `student-${userId}` },
@@ -186,6 +195,12 @@ const addStudent = async (request, response) => {
         const studentData = { studentId: counter.value, ...request.body }
         const studentObj = new StudentModel(studentData)
         const newStudent = await studentObj.save()
+
+        if(telegramId) {
+            const message = `✅ تم إنشاء حسابك بنجاح يا ${newStudent.name}!`
+            telegramBot.sendMessage(newStudent.telegramId, message)
+            telegramBot.sendMessage(newStudent.telegramId, MENU_MESSAGE)
+        }
 
         return response.status(200).json({
             accepted: true,
@@ -217,7 +232,7 @@ const updateStudent = async (request, response) => {
         }
 
         const { studentId } = request.params
-        let { name, phone, groupId } = request.body
+        let { name, phone, groupId, telegramId } = request.body
 
         const student = await StudentModel.findById(studentId)
 
@@ -228,6 +243,26 @@ const updateStudent = async (request, response) => {
                     accepted: false,
                     message: 'Group ID does not exist',
                     field: 'groupId'
+                })
+            }
+
+            const totalGroupStudents = await StudentModel.countDocuments({ groupId })
+            if(group.capacity <= totalGroupStudents) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'لا يوجد مكان في المجموعة',
+                    field: 'groupId'
+                })
+            }
+        }
+
+        if(telegramId && student.telegramId != telegramId) {
+            const totalTelegram = await StudentModel.countDocuments({ userId: student.userId, telegramId })
+            if(totalTelegram != 0) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'انت مسجل مسبقا علي التليجرام',
+                    field: 'telegramId'
                 })
             }
         }

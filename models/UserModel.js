@@ -4,16 +4,17 @@ const config = require('../config/config')
 const UserSchema = new mongoose.Schema({
 
     userId: { type: Number, required: true, unique: true },
+    ownerId: { type: mongoose.Types.ObjectId },
     firstName: { type: String, required: true },
     email: { type: String, required: true },
     password: { type: String },
+    sessionPrice: { type: Number, required: true, default: 0 },
     lang: { type: String, default: 'ar', enum: config.LANGUAGES },
 
     oauth: {
         isGoogleAuth: { type: Boolean, default: false }
     },
 
-    roles: [],
     type: { type: String, required: true, enum: config.TYPES },
 
     isVerified: { type: Boolean, required: true, default: false },
@@ -27,7 +28,65 @@ const UserSchema = new mongoose.Schema({
     deleteAccount: {
         verificationCode: { type: Number },
         expirationDate: { type: Date }
-    }
+    },
+
+    modules: {
+        students: { 
+            isCreate: { type: Boolean, default: true },
+            isRead: { type: Boolean, default: true },
+            isUpdate: { type: Boolean, default: true },
+            isDelete: { type: Boolean, default: true }
+        },
+        groups: { 
+            isCreate: { type: Boolean, default: true },
+            isRead: { type: Boolean, default: true },
+            isUpdate: { type: Boolean, default: true },
+            isDelete: { type: Boolean, default: true }
+        },
+        subscriptions: { 
+            isCreate: { type: Boolean, default: true },
+            isRead: { type: Boolean, default: true },
+            isUpdate: { type: Boolean, default: true },
+            isDelete: { type: Boolean, default: true }
+        },
+        payments: { 
+            isCreate: { type: Boolean, default: true },
+            isRead: { type: Boolean, default: true },
+            isUpdate: { type: Boolean, default: true },
+            isDelete: { type: Boolean, default: true }
+        },
+        shifts: { 
+            isCreate: { type: Boolean, default: true },
+            isRead: { type: Boolean, default: true },
+            isUpdate: { type: Boolean, default: true },
+            isDelete: { type: Boolean, default: true }
+        },
+        attendances: { 
+            isCreate: { type: Boolean, default: true },
+            isRead: { type: Boolean, default: true },
+            isUpdate: { type: Boolean, default: true },
+            isDelete: { type: Boolean, default: true }
+        },
+        exams: { 
+            isCreate: { type: Boolean, default: true },
+            isRead: { type: Boolean, default: true },
+            isUpdate: { type: Boolean, default: true },
+            isDelete: { type: Boolean, default: true }
+        },
+        grades: { 
+            isCreate: { type: Boolean, default: true },
+            isRead: { type: Boolean, default: true },
+            isUpdate: { type: Boolean, default: true },
+            isDelete: { type: Boolean, default: true }
+        },
+        assignments: { 
+            isCreate: { type: Boolean, default: true },
+            isRead: { type: Boolean, default: true },
+            isUpdate: { type: Boolean, default: true },
+            isDelete: { type: Boolean, default: true }
+        },
+    },
+
 
 }, { timestamps: true })
 

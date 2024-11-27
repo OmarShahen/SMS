@@ -5,7 +5,8 @@ const assignmentValidation = require('../validations/assignments')
 const utils = require('../utils/utils')
 const config = require('../config/config')
 const GroupModel = require('../models/GroupModel')
-
+const mongoose = require('mongoose')
+const SubmissionModel = require('../models/SubmissionModel')
 
 const getUserAssignments = async (request, response) => {
 
@@ -32,7 +33,7 @@ const getUserAssignments = async (request, response) => {
         }
 
         if(groupId) {
-            searchQuery.groupId = groupId
+            searchQuery.groups = { $in: [mongoose.Types.ObjectId(groupId)] }
         }
 
         if(academicYear) {
@@ -65,7 +66,7 @@ const getUserAssignments = async (request, response) => {
             {
                 $lookup: {
                     from: 'groups',
-                    localField: 'groupId',
+                    localField: 'groups',
                     foreignField: '_id',
                     as: 'group'
                 }
@@ -79,7 +80,6 @@ const getUserAssignments = async (request, response) => {
 
         assignments.forEach(assignment => {
             assignment.user = assignment.user[0]
-            assignment.group = assignment.group[0]
         })
 
         const totalAssignments = await AssignmentModel.countDocuments(searchQuery)
@@ -113,7 +113,7 @@ const addAssignment = async (request, response) => {
             })
         }
 
-        const { userId, groupId, title } = request.body
+        const { userId, groups, academicYear } = request.body
 
         const user = await UserModel.findById(userId)
         if(!user) {
@@ -124,21 +124,12 @@ const addAssignment = async (request, response) => {
             })
         }
 
-        const group = await GroupModel.findById(groupId)
-        if(!group) {
+        const totalGroups = await GroupModel.countDocuments({ userId, academicYear, _id: { $in: groups } })
+        if(totalGroups != groups.length) {
             return response.status(400).json({
                 accepted: false,
-                message: 'Group ID is not registered',
-                field: 'groupId'
-            })
-        }
-
-        const totalTitles = await AssignmentModel.countDocuments({ groupId, title })
-        if(totalTitles != 0) {
-            return response.status(400).json({
-                accepted: false,
-                message: 'اسم الواجب مسجل مسبقا في هذه المجموعة',
-                field: 'title'
+                message: 'المجموعات غير مسجلة في هذه السنة الدراسية',
+                field: 'groups'
             })
         }
 
@@ -148,7 +139,7 @@ const addAssignment = async (request, response) => {
             { new: true, upsert: true }
         )
 
-        const assignmentData = { assignmentId: counter.value, ...request.body, academicYear: group.academicYear }
+        const assignmentData = { assignmentId: counter.value, ...request.body }
         const assignmentObj = new AssignmentModel(assignmentData)
         const newAssignment = await assignmentObj.save()
 
@@ -182,19 +173,20 @@ const updateAssignment = async (request, response) => {
         }
 
         const { assignmentId } = request.params
-        const { title } = request.body
+        const { groups } = request.body
 
         const assignment = await AssignmentModel.findById(assignmentId)
 
-        if(title && assignment.title != title) {
-            const totalTitles = await AssignmentModel.countDocuments({ groupId: assignment.groupId, title })
-            if(totalTitles != 0) {
+        if(groups) {
+            const totalGroups = await GroupModel
+            .countDocuments({ userId: assignment.userId, academicYear: assignment.academicYear, _id: { $in: groups } })
+            if(totalGroups != groups.length) {
                 return response.status(400).json({
                     accepted: false,
-                    message: 'اسم الواجب مسجل مسبقا في هذه المجموعة',
-                    field: 'title'
+                    message: 'المجموعات غير مسجلة في هذه السنة الدراسية',
+                    field: 'groups'
                 })
-            } 
+            }
         }
 
         const updatedAssignment = await AssignmentModel
@@ -256,6 +248,15 @@ const deleteAssignment = async (request, response) => {
     try {
 
         const { assignmentId } = request.params
+
+        const totalSubmissions = await SubmissionModel.countDocuments({ assignmentId })
+        if(totalSubmissions != 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'هناك تسليمات مسجلة في هذا الطالب',
+                field: 'assignmentId'
+            })
+        }
 
         const deletedAssignment = await AssignmentModel.findByIdAndDelete(assignmentId)
 

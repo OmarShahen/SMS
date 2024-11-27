@@ -4,7 +4,7 @@ const utils = require('../utils/utils')
 
 const addSubscription = (subscriptionData) => {
 
-    const { userId, studentId, groupId, recorderId, allowedSessions, startDate, endDate } = subscriptionData
+    const { userId, studentId, groupId, recorderId, academicYear, allowedSessions, startDate, endDate, totalPrice, amountPaid, paymentMethod } = subscriptionData
 
     if(!userId) return { isAccepted: false, message: 'User ID is required', field: 'userId' }
 
@@ -22,6 +22,12 @@ const addSubscription = (subscriptionData) => {
 
     if(!utils.isObjectId(recorderId)) return { isAccepted: false, message: 'Recorder ID format is invalid', field: 'recorderId' }
 
+    if(!academicYear) return { isAccepted: false, message: 'Academic year is required', field: 'academicYear' }
+
+    if(typeof academicYear != 'string') return { isAccepted: false, message: 'Academic year format is invalid', field: 'academicYear' }
+
+    if(!config.ACADEMIC_YEARS.includes(academicYear)) return { isAccepted: false, message: 'Academic year value is invalid', field: 'academicYear' }
+
     if(typeof allowedSessions != 'number' || allowedSessions <= 0) return { isAccepted: false, message: 'Allowed sessions format is invalid', field: 'allowedSessions' }
 
     if(startDate && !utils.isDateValid(startDate)) return { isAccepted: false, message: 'Start date format is invalid', field: 'startDate' }
@@ -30,7 +36,13 @@ const addSubscription = (subscriptionData) => {
 
     if(!utils.isDateValid(endDate)) return { isAccepted: false, message: 'End date format is invalid', field: 'endDate' }
 
-    if(startDate ? startDate : new Date() && endDate && new Date(startDate ? startDate : new Date()) > new Date(endDate)) return { isAccepted: false, message: 'تاريخ الانتهاء يجب ان يكون بعد تاريخ البدء', field: 'endDate' }
+    if(new Date(endDate) < new Date()) return { isAccepted: false, message: 'تاريخ نهاية الاشتراك قد مضي', field: 'endDate' }
+
+    if(typeof totalPrice != 'number' || totalPrice < 0) return { isAccepted: false, message: 'Total price format is invalid', field: 'totalPrice' }
+
+    if(amountPaid && typeof amountPaid != 'number' || amountPaid < 0) return { isAccepted: false, message: 'Amount paid format is invalid', field: 'amountPaid' }
+
+    if(paymentMethod && !config.PAYMENT_METHODS.includes(paymentMethod)) return { isAccepted: false, message: 'Payment method value is invalid', field: 'paymentMethod' }
 
     return { isAccepted: true, message: 'data is valid', data: subscriptionData }
 }

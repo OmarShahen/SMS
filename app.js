@@ -28,7 +28,6 @@ bree.start()*/
 
 app.use('/api', require('./routes/auth'))
 app.use('/api', require('./routes/users'))
-app.use('/api', require('./routes/analytics'))
 app.use('/api', require('./routes/groups'))
 app.use('/api', require('./routes/students'))
 app.use('/api', require('./routes/exams'))
@@ -38,6 +37,7 @@ app.use('/api', require('./routes/subscriptions'))
 app.use('/api', require('./routes/attendances'))
 app.use('/api', require('./routes/assignments'))
 app.use('/api', require('./routes/submissions'))
+app.use('/api', require('./routes/payments'))
 app.use(require('./routes/telegram'))
 
 

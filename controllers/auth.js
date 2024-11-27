@@ -11,6 +11,7 @@ const { sendForgotPasswordVerificationCode } = require('../mails/forgot-password
 const { sendDeleteAccountCode } = require('../mails/delete-account')
 const translations = require('../i18n/index')
 const { sendVerificationCode } = require('../mails/verification-code')
+const axios = require('axios')
 
 
 const userLogin = async (request, response) => {
@@ -111,7 +112,7 @@ const userSignup = async (request, response) => {
         )
 
         const userPassword = bcrypt.hashSync(password, config.SALT_ROUNDS)
-        let userData = { ...request.body, userId: counter.value, password: userPassword, type: 'TEACHER' }
+        let userData = { ...request.body, userId: counter.value, password: userPassword, type: 'OWNER' }
         userData._id = undefined
 
         const userObj = new UserModel(userData)
@@ -144,6 +145,61 @@ const userSignup = async (request, response) => {
     }
 }
 
+const userGoogleLogin = async (request, response) => {
+
+    try {
+
+        const { accessToken } = request.query
+
+        const googleResponse = await axios
+        .get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${accessToken}`)
+
+        const { email } = googleResponse.data
+
+        const userList = await UserModel
+        .find({ email, isVerified: true })
+
+        if(userList.length == 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'Email is not registered',
+                field: 'email'
+            })
+        }
+
+        const user = userList[0]
+
+        if(user.isBlocked) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'Your account is blocked',
+                field: 'email'
+            })
+        }
+
+        const updatedUser = await UserModel
+        .findByIdAndUpdate(user._id, { lastLoginDate: new Date() }, { new: true })
+
+        updatedUser.password = undefined
+
+        const token = jwt.sign(user._doc, config.SECRET_KEY, { expiresIn: '365d' })
+
+        return response.status(200).json({
+            accepted: true,
+            user: updatedUser,
+            token
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
 
 const verifyEmailVerificationCode = async (request, response) => {
 
@@ -155,7 +211,7 @@ const verifyEmailVerificationCode = async (request, response) => {
         if(emailVerificationList.length == 0) {
             return response.status(400).json({
                 accepted: false,
-                message: 'There is no verification code registered',
+                message: 'لا يوجد رمز تحقق مسجل',
                 field: 'code'
             })
         }
@@ -173,7 +229,7 @@ const verifyEmailVerificationCode = async (request, response) => {
 
         return response.status(200).json({
             accepted: true,
-            message: 'Account is activated successfully!',
+            message: 'تم تفعيل الحساب بنجاح!',
             user: updatedUser,
             deletedCodes: deleteCodes.deletedCount,
             token
@@ -608,6 +664,7 @@ const resetPassword = async (request, response) => {
 module.exports = {
     userLogin,
     userSignup,
+    userGoogleLogin,
     verifyEmailVerificationCode,
     verifyEmail,
     setUserVerified,

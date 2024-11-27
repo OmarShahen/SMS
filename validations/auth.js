@@ -48,7 +48,7 @@ const checkRoles = (roles) => {
 
 const userSignup = (userData) => {
 
-    const { firstName, email, password } = userData
+    const { firstName, email, password, sessionPrice } = userData
 
     if(!firstName) return { isAccepted: false, message: 'Name is required', field: 'firstName' }
 
@@ -66,6 +66,9 @@ const userSignup = (userData) => {
 
     if(!validatedPassword.isAccepted) return { isAccepted: false, message: validatedPassword.message, field: 'password' }
 
+    if(!sessionPrice) return { isAccepted: false, message: 'Session price is required', field: 'sessionPrice' } 
+
+    if(typeof sessionPrice != 'number') return { isAccepted: false, message: 'Session price format is invalid', field: 'sessionPrice' }
     
     return { isAccepted: true, message: 'data is valid', data: userData }
 

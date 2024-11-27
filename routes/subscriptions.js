@@ -31,4 +31,11 @@ router.delete(
     (request, response) => subscriptionsController.deleteSubscription(request, response)
 )
 
+router.get(
+    '/v1/analytics/subscriptions/users/:userId/stats',
+    authorization.allPermission,
+    verifyUserId,
+    (request, response) => subscriptionsController.getSubscriptionsStats(request, response)
+)
+
 module.exports = router

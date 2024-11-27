@@ -43,120 +43,18 @@ const verifyToken = (request, response, next) => {
     }
 }
 
-const staffPermission = (request, response, next) => {
-
-    try {
-
-        const authorizedRoles = ['STAFF']
-
-        verifyToken(request, response, () => {
-
-            const { roles } = request.user
-
-            if(utils.isRolesValid(roles, authorizedRoles)) {
-
-                next()
-
-            } else {
-
-                return response.status(403).json({
-                    accepted: false,
-                    message: 'unauthorized user type to access this resources',
-                    field: 'token'
-                })
-            }
-            
-        })
-
-    } catch(error) {
-        console.error(error)
-        return response.status(500).json({
-            message: 'internal server error',
-            error: error.message
-        })
-    }
-}
-
-const doctorPermission = (request, response, next) => {
-
-    try {
-
-        const authorizedRoles = ['DOCTOR']
-
-        verifyToken(request, response, () => {
-
-            const { roles } = request.user
-
-            if(utils.isRolesValid(roles, authorizedRoles)) {
-
-                next()
-
-            } else {
-
-                return response.status(403).json({
-                    accepted: false,
-                    message: 'unauthorized user type to access this resources',
-                    field: 'token'
-                })
-            }
-            
-        })
-
-    } catch(error) {
-        console.error(error)
-        return response.status(500).json({
-            message: 'internal server error',
-            error: error.message
-        })
-    }
-}
-
-const ownerPermission = (request, response, next) => {
-
-    try {
-
-        const authorizedRoles = ['OWNER']
-
-        verifyToken(request, response, () => {
-
-            const { roles } = request.user
-
-            if(utils.isRolesValid(roles, authorizedRoles)) {
-
-                next()
-
-            } else {
-
-                return response.status(403).json({
-                    accepted: false,
-                    message: 'unauthorized user type to access this resources',
-                    field: 'token'
-                })
-            }
-            
-        })
-
-    } catch(error) {
-        console.error(error)
-        return response.status(500).json({
-            message: 'internal server error',
-            error: error.message
-        })
-    }
-}
 
 const allPermission = (request, response, next) => {
 
     try {
 
-        const authorizedRoles = ['EMPLOYEE', 'TEACHER']
-        const types = ['EMPLOYEE', 'ADMIN', 'TEACHER']
+        const types = ['EMPLOYEE', 'ADMIN', 'OWNER']
 
         verifyToken(request, response, () => {
 
-            const { roles, type } = request.user
+            const { type } = request.user
 
-            if(utils.isRolesValid(roles, authorizedRoles) || types.includes(type)) {
+            if(types.includes(type)) {
 
                 next()
 
@@ -180,44 +78,6 @@ const allPermission = (request, response, next) => {
     }
 }
 
-const adminAndExpertPermission = (request, response, next) => {
 
-    try {
 
-        const authorizedRoles = ['EMPLOYEE']
-        const types = ['EXPERT']
-
-        verifyToken(request, response, () => {
-
-            const { roles, type } = request.user
-
-            if(utils.isRolesValid(roles, authorizedRoles) || types.includes(type)) {
-                next()
-            } else {
-
-                return response.status(403).json({
-                    accepted: false,
-                    message: 'unauthorized user type to access this resources',
-                    field: 'token'
-                })
-            }
-            
-        })
-
-    } catch(error) {
-        console.error(error)
-        return response.status(500).json({
-            message: 'internal server error',
-            error: error.message
-        })
-    }
-}
-
-module.exports = { 
-    verifyToken,
-    staffPermission,
-    doctorPermission,
-    ownerPermission,
-    allPermission,
-    adminAndExpertPermission
-}
+module.exports = { verifyToken, allPermission }

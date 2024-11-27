@@ -121,7 +121,6 @@ const addGroup = async (request, response) => {
             })
         }
 
-
         const totalNames = await GroupModel.countDocuments({ userId, name, academicYear })
         if(totalNames != 0) {
             return response.status(400).json({
@@ -172,7 +171,7 @@ const updateGroup = async (request, response) => {
         }
 
         const { groupId } = request.params
-        const { name } = request.body
+        const { name, capacity } = request.body
 
         const group = await GroupModel.findById(groupId)
 
@@ -185,6 +184,17 @@ const updateGroup = async (request, response) => {
                     field: 'name'
                 })
             } 
+        }
+
+        if(capacity != group.capacity) {
+            const totalGroupStudents = await StudentModel.countDocuments({ groupId })
+            if(capacity < totalGroupStudents) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'عدد الطلاب في المجموعة اكثر من السعة الجديدة',
+                    field: 'groupId'
+                })
+            }
         }
 
         const updatedGroup = await GroupModel
@@ -257,5 +267,27 @@ const deleteGroup = async (request, response) => {
     }
 }
 
+const getGroup = async (request, response) => {
 
-module.exports = { getUserGroups, addGroup, updateGroup, deleteGroup }
+    try {
+
+        const { groupId } = request.params
+
+        const group = await GroupModel.findById(groupId)
+
+        return response.status(200).json({
+            accepted: true,
+            group
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+module.exports = { getUserGroups, addGroup, updateGroup, deleteGroup, getGroup }

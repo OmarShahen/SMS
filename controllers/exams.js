@@ -109,6 +109,28 @@ const getUserExams = async (request, response) => {
     }
 }
 
+const getExam = async (request, response) => {
+
+    try {
+
+        const { examId } = request.params
+
+        const exam = await ExamModel.findById(examId)
+
+        return response.status(200).json({
+            accepted: true,
+            exam
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
 
 const addExam = async (request, response) => {
 
@@ -341,4 +363,4 @@ const deleteExam = async (request, response) => {
 }
 
 
-module.exports = { getUserExams, addExam, updateExam, updateExamURL, updateExamAnswerURL, deleteExam }
+module.exports = { getUserExams, getExam, addExam, updateExam, updateExamURL, updateExamAnswerURL, deleteExam }
