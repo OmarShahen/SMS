@@ -31,6 +31,12 @@ router.post(
     (request, response) => attendancesController.addAttendanceBySubscriptionId(request, response)
 )
 
+router.post(
+    '/v1/attendances/students/QR-code-UUID/:QRCodeUUID',
+    authorization.allPermission,
+    (request, response) => attendancesController.addAttendanceByStudentQRCodeUUID(request, response)
+)
+
 router.patch(
     '/v1/attendances/:attendanceId/status',
     authorization.allPermission,

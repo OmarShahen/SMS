@@ -3,11 +3,15 @@ const config = require('../config/config')
 
 const addAssignment = (assignmentData) => {
 
-    const { userId, groups, title, description, isActive, totalMarks, dueDate, academicYear } = assignmentData
+    const { userId, teacherId, courseId, groups, title, description, isActive, totalMarks, dueDate, academicYear } = assignmentData
 
     if(!userId) return { isAccepted: false, message: 'User ID is required', field: 'userId' }
 
     if(!utils.isObjectId(userId)) return { isAccepted: false, message: 'User ID format is invalid', field: 'userId' }
+
+    if(teacherId && !utils.isObjectId(teacherId)) return { isAccepted: false, message: 'Teacher ID format is invalid', field: 'teacherId' }
+    
+    if(courseId && !utils.isObjectId(courseId)) return { isAccepted: false, message: 'Course ID format is invalid', field: 'courseId' }
 
     if(!Array.isArray(groups) || groups.length == 0) return { isAccepted: false, message: 'Groups format is invalid', field: 'groups' }
 

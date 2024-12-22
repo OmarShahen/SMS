@@ -4,6 +4,8 @@ const UserModel = require('../models/UserModel')
 const StudentModel = require('../models/StudentModel')
 const AttendanceModel = require('../models/AttendanceModel')
 const PaymentModel = require('../models/PaymentModel')
+const TeacherModel = require('../models/TeacherModel')
+const CourseModel = require('../models/CourseModel')
 const CounterModel = require('../models/CounterModel')
 const subscriptionValidation = require('../validations/subscriptions')
 const utils = require('../utils/utils')
@@ -19,7 +21,7 @@ const getUserSubscriptions = async (request, response) => {
     try {
 
         const { userId } = request.params
-        let { studentId, groupId, recorderId, status, academicYear, isPaid, limit, page } = request.query
+        let { studentId, teacherId, courseId, groupId, recorderId, status, academicYear, isPaid, limit, page } = request.query
 
         const { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -30,6 +32,14 @@ const getUserSubscriptions = async (request, response) => {
 
         if(studentId) {
             searchQuery.studentId = mongoose.Types.ObjectId(studentId)
+        }
+
+        if(teacherId) {
+            searchQuery.teacherId = mongoose.Types.ObjectId(teacherId)
+        }
+        
+        if(courseId) {
+            searchQuery.courseId = mongoose.Types.ObjectId(courseId)
         }
 
         if(groupId) {
@@ -114,6 +124,22 @@ const getUserSubscriptions = async (request, response) => {
                 }
             },
             {
+                $lookup: {
+                    from: 'teachers',
+                    localField: 'teacherId',
+                    foreignField: '_id',
+                    as: 'teacher'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'courses',
+                    localField: 'courseId',
+                    foreignField: '_id',
+                    as: 'course'
+                }
+            },
+            {
                 $project: {
                     'user.password': 0,
                     'recorder.password': 0
@@ -126,6 +152,8 @@ const getUserSubscriptions = async (request, response) => {
             subscription.group = subscription.group[0]
             subscription.student = subscription.student[0]
             subscription.recorder = subscription.recorder[0]
+            subscription.teacher = subscription.teacher[0]
+            subscription.course = subscription.course[0]
         })
 
         const totalSubscriptions = await SubscriptionModel.countDocuments(searchQuery)
@@ -159,7 +187,7 @@ const addSubscription = async (request, response) => {
             })
         }
 
-        const { userId, studentId, groupId, recorderId, totalPrice, amountPaid, paymentMethod } = request.body
+        const { userId, teacherId, courseId, studentId, groupId, recorderId, totalPrice, amountPaid, paymentMethod } = request.body
 
         const userPromise = UserModel.findById(userId)
         const studentPromise = StudentModel.findById(studentId)
@@ -179,6 +207,28 @@ const addSubscription = async (request, response) => {
                 message: 'User ID is not registered',
                 field: 'userId'
             })
+        }
+
+        if(teacherId) {
+            const teacher = await TeacherModel.findById(teacherId)
+            if(!teacher) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Teacher ID is not registered',
+                    field: 'teacherId'
+                })
+            }
+        }
+
+        if(courseId) {
+            const course = await CourseModel.findById(courseId)
+            if(!course) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Course ID is not registered',
+                    field: 'courseId'
+                })
+            }
         }
 
         if(!student) {
@@ -277,7 +327,7 @@ const addSubscription = async (request, response) => {
         ✅ عدد الحصص التي تم حضورها: ${newSubscription.attendedSessions}
         💵 السعر: ${newSubscription.totalPrice} جنيه
         💵 المدفوع: ${amountPaid ? amountPaid : 0} جنيه
-        🔗 رابط الاشتراك: ${config.URL}/subscriptions/${newSubscription._id}/qr-code
+        🔗 رابط الاشتراك: ${config.URL}/qr-code/${updatedStudent.QRCodeUUID}
 
         نتمنى لك تجربة دراسية ناجحة! 🎓
         `

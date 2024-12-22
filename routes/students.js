@@ -11,6 +11,12 @@ router.get(
     (request, response) => studentsController.getUserStudents(request, response)
 )
 
+router.get(
+    '/v1/students/QR-code-UUID/:QRCodeUUID',
+    authorization.allPermission,
+    (request, response) => studentsController.getStudentByQRCodeUUID(request, response)
+)
+
 router.post(
     '/v1/students',
     //authorization.allPermission,
@@ -36,6 +42,13 @@ router.patch(
     authorization.allPermission,
     verifyStudentId,
     (request, response) => studentsController.removeTelegramID(request, response)
+)
+
+router.patch(
+    '/v1/students/:studentId/QR-code-UUID',
+    authorization.allPermission,
+    verifyStudentId,
+    (request, response) => studentsController.createNewQRCodeUUID(request, response)
 )
 
 module.exports = router

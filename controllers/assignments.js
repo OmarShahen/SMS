@@ -5,15 +5,18 @@ const assignmentValidation = require('../validations/assignments')
 const utils = require('../utils/utils')
 const config = require('../config/config')
 const GroupModel = require('../models/GroupModel')
+const TeacherModel = require('../models/TeacherModel')
+const CourseModel = require('../models/CourseModel')
 const mongoose = require('mongoose')
 const SubmissionModel = require('../models/SubmissionModel')
+
 
 const getUserAssignments = async (request, response) => {
 
     try {
 
         const { userId } = request.params
-        let { title, groupId, academicYear, isActive, limit, page } = request.query
+        let { teacherId, courseId, title, groupId, academicYear, isActive, limit, page } = request.query
 
         let { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -21,6 +24,14 @@ const getUserAssignments = async (request, response) => {
         page = page ? Number.parseInt(page) : 1
 
         const skip = (page - 1) * limit
+
+        if(teacherId) {
+            searchQuery.teacherId = mongoose.Types.ObjectId(teacherId)
+        }
+        
+        if(courseId) {
+            searchQuery.courseId = mongoose.Types.ObjectId(courseId)
+        }
 
         if(title) {
             searchQuery.title = { $regex: title, $options: 'i' }
@@ -72,6 +83,22 @@ const getUserAssignments = async (request, response) => {
                 }
             },
             {
+                $lookup: {
+                    from: 'teachers',
+                    localField: 'teacherId',
+                    foreignField: '_id',
+                    as: 'teacher'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'courses',
+                    localField: 'courseId',
+                    foreignField: '_id',
+                    as: 'course'
+                }
+            },
+            {
                 $project: {
                     'user.password': 0,
                 }
@@ -80,6 +107,8 @@ const getUserAssignments = async (request, response) => {
 
         assignments.forEach(assignment => {
             assignment.user = assignment.user[0]
+            assignment.teacher = assignment.teacher[0]
+            assignment.course = assignment.course[0]
         })
 
         const totalAssignments = await AssignmentModel.countDocuments(searchQuery)
@@ -113,7 +142,7 @@ const addAssignment = async (request, response) => {
             })
         }
 
-        const { userId, groups, academicYear } = request.body
+        const { userId, teacherId, courseId, groups, academicYear } = request.body
 
         const user = await UserModel.findById(userId)
         if(!user) {
@@ -122,6 +151,28 @@ const addAssignment = async (request, response) => {
                 message: 'User ID is not registered',
                 field: 'userId'
             })
+        }
+
+        if(teacherId) {
+            const teacher = await TeacherModel.findById(teacherId)
+            if(!teacher) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Teacher ID is not registered',
+                    field: 'teacherId'
+                })
+            }
+        }
+
+        if(courseId) {
+            const course = await CourseModel.findById(courseId)
+            if(!course) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Course ID is not registered',
+                    field: 'courseId'
+                })
+            }
         }
 
         const totalGroups = await GroupModel.countDocuments({ userId, academicYear, _id: { $in: groups } })

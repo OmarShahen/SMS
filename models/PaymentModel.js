@@ -9,6 +9,8 @@ const PaymentSchema = new mongoose.Schema({
     recorderId: { type: mongoose.Types.ObjectId, required: true },
     subscriptionId: { type: mongoose.Types.ObjectId, required: true },
     groupId: { type: mongoose.Types.ObjectId, required: true },
+    teacherId: { type: mongoose.Types.ObjectId },
+    courseId: { type: mongoose.Types.ObjectId },
     academicYear: { type: String, required: true, enum: config.ACADEMIC_YEARS },
     amount: { type: Number, required: true },
     isRefunded: { type: Boolean, default: false },

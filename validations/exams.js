@@ -3,11 +3,15 @@ const config = require('../config/config')
 
 const addExam = (examData) => {
 
-    const { userId, groups, name, chapters, type, subtype, description, isActive, academicYear, duration, totalMarks, date } = examData
+    const { userId, teacherId, courseId, groups, name, chapters, type, subtype, description, isActive, academicYear, duration, totalMarks, date } = examData
 
     if(!userId) return { isAccepted: false, message: 'User ID is required', field: 'userId' }
 
     if(!utils.isObjectId(userId)) return { isAccepted: false, message: 'User ID format is invalid', field: 'userId' }
+
+    if(teacherId && !utils.isObjectId(teacherId)) return { isAccepted: false, message: 'Teacher ID format is invalid', field: 'teacherId' }
+
+    if(courseId && !utils.isObjectId(courseId)) return { isAccepted: false, message: 'Course ID format is invalid', field: 'courseId' }
 
     if(!name) return { isAccepted: false, message: 'Name is required', field: 'name' }
 

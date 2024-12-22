@@ -2,6 +2,8 @@ const ExamModel = require('../models/ExamModel')
 const UserModel = require('../models/UserModel')
 const GroupModel = require('../models/GroupModel')
 const GradeModel = require('../models/GradeModel')
+const TeacherModel = require('../models/TeacherModel')
+const CourseModel = require('../models/CourseModel')
 const CounterModel = require('../models/CounterModel')
 const examValidation = require('../validations/exams')
 const utils = require('../utils/utils')
@@ -14,7 +16,7 @@ const getUserExams = async (request, response) => {
     try {
 
         const { userId } = request.params
-        let { name, groupId, type, subtype, isActive, academicYear, limit, page } = request.query
+        let { name, teacherId, courseId, groupId, type, subtype, isActive, academicYear, limit, page } = request.query
 
         let { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -25,6 +27,14 @@ const getUserExams = async (request, response) => {
 
         if(groupId) {
             searchQuery.groups = { $in: [mongoose.Types.ObjectId(groupId)] }
+        }
+
+        if(teacherId) {
+            searchQuery.teacherId = mongoose.Types.ObjectId(teacherId)
+        }
+        
+        if(courseId) {
+            searchQuery.courseId = mongoose.Types.ObjectId(courseId)
         }
 
         if (type) {
@@ -81,6 +91,22 @@ const getUserExams = async (request, response) => {
                 }
             },
             {
+                $lookup: {
+                    from: 'teachers',
+                    localField: 'teacherId',
+                    foreignField: '_id',
+                    as: 'teacher'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'courses',
+                    localField: 'courseId',
+                    foreignField: '_id',
+                    as: 'course'
+                }
+            },
+            {
                 $project: {
                     'user.password': 0,
                 }
@@ -89,6 +115,8 @@ const getUserExams = async (request, response) => {
 
         exams.forEach(exam => {
             exam.user = exam.user[0]
+            exam.teacher = exam.teacher[0]
+            exam.course = exam.course[0]
         })
 
         const totalExams = await ExamModel.countDocuments(searchQuery)
@@ -145,7 +173,7 @@ const addExam = async (request, response) => {
             })
         }
 
-        let { userId, groups, name, academicYear } = request.body
+        let { userId, teacherId, courseId, groups, name, academicYear } = request.body
 
         const user = await UserModel.findById(userId)
         if(!user) {
@@ -154,6 +182,28 @@ const addExam = async (request, response) => {
                 message: 'User ID is not registered',
                 field: 'userId'
             })
+        }
+
+        if(teacherId) {
+            const teacher = await TeacherModel.findById(teacherId)
+            if(!teacher) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Teacher ID is not registered',
+                    field: 'teacherId'
+                })
+            }
+        }
+
+        if(courseId) {
+            const course = await CourseModel.findById(courseId)
+            if(!course) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Course ID is not registered',
+                    field: 'courseId'
+                })
+            }
         }
 
         const totalGroups = await GroupModel.countDocuments({ userId, academicYear, _id: { $in: groups } })

@@ -48,7 +48,7 @@ const checkRoles = (roles) => {
 
 const userSignup = (userData) => {
 
-    const { firstName, email, password, sessionPrice } = userData
+    const { firstName, email, password, sessionPrice, academicType, organizationType } = userData
 
     if(!firstName) return { isAccepted: false, message: 'Name is required', field: 'firstName' }
 
@@ -70,6 +70,15 @@ const userSignup = (userData) => {
 
     if(typeof sessionPrice != 'number') return { isAccepted: false, message: 'Session price format is invalid', field: 'sessionPrice' }
     
+    if(!academicType) return { isAccepted: false, message: 'Academic type is required', field: 'academicType' } 
+
+    if(!config.ACADEMIC_TYPES.includes(academicType)) return { isAccepted: false, message: 'Academic type value is invalid', field: 'academicType' }
+    
+    if(!organizationType) return { isAccepted: false, message: 'Organization type is required', field: 'organizationType' } 
+
+    if(!config.ORGANIZATION_TYPES.includes(organizationType)) return { isAccepted: false, message: 'Organization type value is invalid', field: 'organizationType' }
+    
+
     return { isAccepted: true, message: 'data is valid', data: userData }
 
 }

@@ -1,6 +1,8 @@
 const GradeModel = require('../models/GradeModel')
 const UserModel = require('../models/UserModel')
 const ExamModel = require('../models/ExamModel')
+const TeacherModel = require('../models/TeacherModel')
+const CourseModel = require('../models/CourseModel')
 const StudentModel = require('../models/StudentModel')
 const gradeValidation = require('../validations/grades')
 const utils = require('../utils/utils')
@@ -14,7 +16,7 @@ const getUserGrades = async (request, response) => {
     try {
 
         const { userId } = request.params
-        let { studentId, examId, correctorId, groupId, academicYear, sorting, limit, page } = request.query
+        let { studentId, teacherId, courseId, examId, correctorId, groupId, academicYear, sorting, limit, page } = request.query
 
         const { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -25,6 +27,14 @@ const getUserGrades = async (request, response) => {
 
         if(studentId) {
             searchQuery.studentId = mongoose.Types.ObjectId(studentId)
+        }
+
+        if(teacherId) {
+            searchQuery.teacherId = mongoose.Types.ObjectId(teacherId)
+        }
+        
+        if(courseId) {
+            searchQuery.courseId = mongoose.Types.ObjectId(courseId)
         }
 
         if(groupId) {
@@ -99,6 +109,22 @@ const getUserGrades = async (request, response) => {
                 }
             },
             {
+                $lookup: {
+                    from: 'teachers',
+                    localField: 'teacherId',
+                    foreignField: '_id',
+                    as: 'teacher'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'courses',
+                    localField: 'courseId',
+                    foreignField: '_id',
+                    as: 'course'
+                }
+            },
+            {
                 $project: {
                     'user.password': 0,
                     'corrector.password': 0
@@ -111,6 +137,8 @@ const getUserGrades = async (request, response) => {
             grade.exam = grade.exam[0]
             grade.student = grade.student[0]
             grade.group = grade.group[0]
+            grade.teacher = grade.teacher[0]
+            grade.course = grade.course[0]
         })
 
         const totalGrades = await GradeModel.countDocuments(searchQuery)
@@ -170,7 +198,7 @@ const addGrade = async (request, response) => {
         }
 
         const { isNotify } = request.query
-        const { userId, studentId, examId, correctorId, score } = request.body
+        const { userId, teacherId, courseId, studentId, examId, correctorId, score } = request.body
 
         const userPromise = UserModel.findById(userId)
         const studentPromise = StudentModel.findById(studentId)
@@ -183,6 +211,28 @@ const addGrade = async (request, response) => {
             examPromise,
             correctorPromise
         ])
+
+        if(teacherId) {
+            const teacher = await TeacherModel.findById(teacherId)
+            if(!teacher) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Teacher ID is not registered',
+                    field: 'teacherId'
+                })
+            }
+        }
+
+        if(courseId) {
+            const course = await CourseModel.findById(courseId)
+            if(!course) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Course ID is not registered',
+                    field: 'courseId'
+                })
+            }
+        }
 
         if(!user) {
             return response.status(400).json({

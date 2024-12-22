@@ -8,6 +8,8 @@ const SubscriptionSchema = new mongoose.Schema({
     studentId: { type: mongoose.Types.ObjectId, required: true },
     groupId: { type: mongoose.Types.ObjectId, required: true },
     recorderId: { type: mongoose.Types.ObjectId, required: true },
+    teacherId: { type: mongoose.Types.ObjectId },
+    courseId: { type: mongoose.Types.ObjectId },
     academicYear: { type: String, required: true, enum: config.ACADEMIC_YEARS },
     status: { type: String, default: 'ACTIVE', enum: config.SUBSCRIPTION_STATUS },
     allowedSessions: { type: Number, default: 0 },

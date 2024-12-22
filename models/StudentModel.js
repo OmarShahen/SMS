@@ -6,6 +6,7 @@ const StudentSchema = new mongoose.Schema({
     studentId: { type: Number, required: true },
     userId: { type: mongoose.Types.ObjectId, required: true },
     groupId: { type: mongoose.Types.ObjectId, required: true },
+    courseId: { type: mongoose.Types.ObjectId },
     subscriptionId: { type: mongoose.Types.ObjectId, default: null },
     name: { type: String, required: true },
     phone: { type: String, required: true },
@@ -17,7 +18,8 @@ const StudentSchema = new mongoose.Schema({
     address: { type: String },
     referredBy: { type: String, enum: config.REFER_METHODS },
     telegramId: { type: String, default: null },
-    parentTelegramId: { type: String, default: null }
+    parentTelegramId: { type: String, default: null },
+    QRCodeUUID: { type: String },
 
 }, { timestamps: true })
 

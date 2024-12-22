@@ -10,6 +10,9 @@ module.exports = {
     SUPPORT_NUMBER: '+201555415331',
     GENDER: ['MALE', 'FEMALE'],
     TYPES: ['EMPLOYEE', 'ADMIN', 'OWNER'],
+    ACADEMIC_TYPES: ['ALL', 'SCHOOL', 'UNIVERSITY'],
+    ORGANIZATION_TYPES: ['TEACHER', 'CENTER'],
+    TEACHER_TITLES: ['TEACHER', 'LECTURER'],
     EMAIL: {
         APP_MAIL: 'raayaeg@gmail.com',
         APP_MAIL_PASSWORD: process.env.APP_MAIL_PASSWORD,

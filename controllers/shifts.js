@@ -9,6 +9,9 @@ const utils = require('../utils/utils')
 const config = require('../config/config')
 const mongoose = require('mongoose')
 const AttendanceModel = require('../models/AttendanceModel')
+const TeacherModel = require('../models/TeacherModel')
+const CourseModel = require('../models/CourseModel')
+
 
 const getAbsentStudents = (students, attendances) => {
     
@@ -38,7 +41,7 @@ const getUserShifts = async (request, response) => {
     try {
 
         const { userId } = request.params
-        let { recorderId, groupId, isActive, academicYear, limit, page } = request.query
+        let { recorderId, teacherId, courseId, groupId, isActive, academicYear, limit, page } = request.query
 
         const { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -49,6 +52,14 @@ const getUserShifts = async (request, response) => {
 
         if(recorderId) {
             searchQuery.recorderId = mongoose.Types.ObjectId(recorderId)
+        }
+
+        if(teacherId) {
+            searchQuery.teacherId = mongoose.Types.ObjectId(teacherId)
+        }
+        
+        if(courseId) {
+            searchQuery.courseId = mongoose.Types.ObjectId(courseId)
         }
 
         if(groupId) {
@@ -113,6 +124,22 @@ const getUserShifts = async (request, response) => {
                 }
             },
             {
+                $lookup: {
+                    from: 'teachers',
+                    localField: 'teacherId',
+                    foreignField: '_id',
+                    as: 'teacher'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'courses',
+                    localField: 'courseId',
+                    foreignField: '_id',
+                    as: 'course'
+                }
+            },
+            {
                 $project: {
                     'user.password': 0,
                     'recorder.password': 0
@@ -125,6 +152,8 @@ const getUserShifts = async (request, response) => {
             shift.recorder = shift.recorder[0]
             shift.group = shift.group[0]
             shift.assignment = shift.assignment[0]
+            shift.teacher = shift.teacher[0]
+            shift.course = shift.course[0]
         })
 
         const totalShifts = await ShiftModel.countDocuments(searchQuery)
@@ -162,11 +191,12 @@ const getShift = async (request, response) => {
                     foreignField: '_id',
                     as: 'assignment'
                 }
-            },
-            {
-                $unwind: '$assignment'
             }
         ])
+
+        shiftList.forEach(shift => {
+            shift.assignment = shift.assignment[0]
+        })
 
         const shift = shiftList[0]
 
@@ -198,7 +228,7 @@ const addShift = async (request, response) => {
             })
         }
 
-        const { userId, recorderId, groupId, assignmentId } = request.body
+        const { userId, teacherId, courseId, recorderId, groupId, assignmentId } = request.body
 
         const userPromise = UserModel.findById(userId)
         const recorderPromise = UserModel.findById(recorderId)
@@ -216,6 +246,28 @@ const addShift = async (request, response) => {
                 message: 'User ID is not registered',
                 field: 'userId'
             })
+        }
+
+        if(teacherId) {
+            const teacher = await TeacherModel.findById(teacherId)
+            if(!teacher) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Teacher ID is not registered',
+                    field: 'teacherId'
+                })
+            }
+        }
+
+        if(courseId) {
+            const course = await CourseModel.findById(courseId)
+            if(!course) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Course ID is not registered',
+                    field: 'courseId'
+                })
+            }
         }
 
         if(!recorder) {
@@ -268,6 +320,41 @@ const addShift = async (request, response) => {
             accepted: true,
             message: 'تم فتح تسجيل المجموعة بنجاح',
             shift: newShift,
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+const updateShift = async (request, response) => {
+
+    try {
+
+        const dataValidation = shiftValidation.updateShift(request.body)
+        if(!dataValidation.isAccepted) {
+            return response.status(400).json({
+                accepted: dataValidation.isAccepted,
+                message: dataValidation.message,
+                field: dataValidation.field
+            })
+        }
+
+        const { shiftId } = request.params
+        const { note } = request.body
+
+        const updatedShift = await ShiftModel
+        .findByIdAndUpdate(shiftId, { note }, { new: true })
+
+        return response.status(200).json({
+            accepted: true,
+            message: 'تم تحديث وردية الحضور بنجاح',
+            shift: updatedShift,
         })
 
     } catch(error) {
@@ -352,7 +439,8 @@ const closeShift = async (request, response) => {
                 subscriptionId: absentStudent.subscriptionId,
                 recorderId: shift.userId,
                 status: 'ABSENT',
-                academicYear: shift.academicYear
+                academicYear: shift.academicYear,
+                note: shift.note
             }
         })
 
@@ -408,4 +496,4 @@ const getShiftStats = async (request, response) => {
 }
 
 
-module.exports = { getUserShifts, getShift, addShift, closeShift, deleteShift, getShiftStats }
+module.exports = { getUserShifts, getShift, addShift, updateShift, closeShift, deleteShift, getShiftStats }

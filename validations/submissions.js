@@ -3,11 +3,15 @@ const config = require('../config/config')
 
 const addSubmission = (submissionData) => {
 
-    const { userId, studentId, assignmentId, score, submissionDate, status, note } = submissionData
+    const { userId, teacherId, courseId, studentId, assignmentId, score, submissionDate, status, note } = submissionData
 
     if(!userId) return { isAccepted: false, message: 'User ID is required', field: 'userId' }
 
     if(!utils.isObjectId(userId)) return { isAccepted: false, message: 'User ID format is invalid', field: 'userId' }
+
+    if(teacherId && !utils.isObjectId(teacherId)) return { isAccepted: false, message: 'Teacher ID format is invalid', field: 'teacherId' }
+    
+    if(courseId && !utils.isObjectId(courseId)) return { isAccepted: false, message: 'Course ID format is invalid', field: 'courseId' }
 
     if(!studentId) return { isAccepted: false, message: 'Student ID is required', field: 'studentId' }
 

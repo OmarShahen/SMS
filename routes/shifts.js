@@ -24,6 +24,13 @@ router.post(
     (request, response) => shiftsController.addShift(request, response)
 )
 
+router.put(
+    '/v1/shifts/:shiftId',
+    authorization.allPermission,
+    verifyShiftId,
+    (request, response) => shiftsController.updateShift(request, response)
+)
+
 router.patch(
     '/v1/shifts/:shiftId/close',
     authorization.allPermission,

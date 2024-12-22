@@ -14,6 +14,8 @@ const { ACADEMIC_YEARS, SUBSCRIPTION_STATUS, ATTENDANCE_STATUS, PAYMENT_METHODS,
 const { format } = require('date-fns')
 const config = require('../config/config')
 const { MENU_MESSAGE } = require('./messages/messages')
+const { v4: uuidv4 } = require('uuid')
+
 
 const initTelegramBot = () => {
   telegramBot.on('message', async (message) => {
@@ -103,7 +105,8 @@ const initTelegramBot = () => {
         `الاسم: ${student.name}\n` +
         `رقم التعريف: ${student.studentId}\n` +
         `الهاتف: ${student.phone}\n` +
-        `المستوى الدراسي: ${ACADEMIC_YEARS[student.academicYear]}\n\n` +
+        `المستوى الدراسي: ${ACADEMIC_YEARS[student.academicYear]}\n` +
+        `رابط الحضور: ${config.URL}/qr-code/${student?.QRCodeUUID}\n\n` +
         `إذا واجهت أي مشكلة أو كانت هناك معلومات غير صحيحة، يرجى التواصل مع المعلم الخاص بك.\n\n` +
         `شكرًا لاستخدامك نظامنا!`     
         
@@ -145,7 +148,7 @@ const initTelegramBot = () => {
           📅 تاريخ النهاية: ${subscription.endDate ? format(new Date(subscription.endDate), `yyyy-MM-dd`) : `غير مسجل`}
           📌 الحالة: ${SUBSCRIPTION_STATUS[subscriptionStatus]}
           💳 مدفوع: ${subscription.isPaid ? "نعم" : "لا"}
-          🔗 رابط الاشتراك: ${config.URL}/subscriptions/${subscription._id}/qr-code
+          🔗 رابط الاشتراك: ${config.URL}/qr-code/${student.QRCodeUUID}
           ------------------
           `
       })
@@ -435,6 +438,14 @@ const initTelegramBot = () => {
 
       const message = `هذا هو معرف التليجرام الخاص بك: <b>${chatId}</b>`
       return telegramBot.sendMessage(chatId, message, { parse_mode: 'HTML' })
+
+    } else if(messageText == '13') {
+
+      const updatedStudent = await StudentModel
+      .findByIdAndUpdate(student._id, { QRCodeUUID: uuidv4() }, { new: true })
+
+      const message = `تم انشاء كود تسجيل حضور جديد: ${config.URL}/qr-code/${updatedStudent.QRCodeUUID}`
+      telegramBot.sendMessage(updatedStudent.telegramId, message)
 
     } else if(messageText == '0') {
 

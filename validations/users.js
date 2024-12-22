@@ -64,16 +64,18 @@ const validateModules = (modules) => {
 
 const updateUserMainData = (userData) => {
 
-    const { firstName, sessionPrice } = userData
+    const { firstName, sessionPrice, academicType, organizationType } = userData
 
 
     if(firstName && !utils.isNameValid(firstName)) return { isAccepted: false, message: 'Invalid name formate', field: 'firstName' }
 
     if(sessionPrice && typeof sessionPrice != 'number') return { isAccepted: false, message: 'Session price format is invalid', field: 'sessionPrice' }
 
+    if(academicType && !config.ACADEMIC_TYPES.includes(academicType)) return { isAccepted: false, message: 'Academic type value is invalid', field: 'academicType' }
+    
+    if(organizationType && !config.ORGANIZATION_TYPES.includes(organizationType)) return { isAccepted: false, message: 'Organization type value is invalid', field: 'organizationType' }
 
     return { isAccepted: true, message: 'data is valid', data: userData }
-
 }
 
 const updateUserProfileImage = (userData) => {

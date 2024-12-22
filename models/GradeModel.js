@@ -8,6 +8,8 @@ const GradeSchema = new mongoose.Schema({
     examId: { type: mongoose.Types.ObjectId, required: true },
     correctorId: { type: mongoose.Types.ObjectId, required: true },
     groupId: { type: mongoose.Types.ObjectId, required: true },
+    teacherId: { type: mongoose.Types.ObjectId },
+    courseId: { type: mongoose.Types.ObjectId },
     score: { type: Number, required: true, default: 0 },
     academicYear: { type: String, required: true, enum: config.ACADEMIC_YEARS },
     note: { type: String }

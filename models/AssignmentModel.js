@@ -5,6 +5,8 @@ const AssignmentSchema = new mongoose.Schema({
 
     assignmentId: { type: Number, required: true },
     userId: { type: mongoose.Types.ObjectId, required: true },
+    teacherId: { type: mongoose.Types.ObjectId },
+    courseId: { type: mongoose.Types.ObjectId },
     groups: [mongoose.Types.ObjectId],
     title: { type: String, required: true },
     description: { type: String, required: true },

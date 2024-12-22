@@ -4,7 +4,7 @@ const config = require('../config/config')
 
 const addPayment = (paymentData) => {
 
-    const { userId, studentId, recorderId, subscriptionId, groupId, academicYear, paymentMethod, amount } = paymentData
+    const { userId, studentId, recorderId, subscriptionId, groupId, teacherId, courseId, academicYear, paymentMethod, amount } = paymentData
 
     if(!userId) return { isAccepted: false, message: 'User Id is required', field: 'userId' }
 
@@ -25,6 +25,10 @@ const addPayment = (paymentData) => {
     if(!groupId) return { isAccepted: false, message: 'Group Id is required', field: 'groupId' }
 
     if(!utils.isObjectId(groupId)) return { isAccepted: false, message: 'Group Id format is invalid', field: 'groupId' }
+
+    if(teacherId && !utils.isObjectId(teacherId)) return { isAccepted: false, message: 'Teacher ID format is invalid', field: 'teacherId' }
+
+    if(courseId && !utils.isObjectId(courseId)) return { isAccepted: false, message: 'Course ID format is invalid', field: 'courseId' }
 
     if(!paymentMethod) return { isAccepted: false, message: 'Payment method is required', field: 'paymentMethod' }
 

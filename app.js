@@ -38,6 +38,9 @@ app.use('/api', require('./routes/attendances'))
 app.use('/api', require('./routes/assignments'))
 app.use('/api', require('./routes/submissions'))
 app.use('/api', require('./routes/payments'))
+app.use('/api', require('./routes/specializations'))
+app.use('/api', require('./routes/teachers'))
+app.use('/api', require('./routes/courses'))
 app.use(require('./routes/telegram'))
 
 

@@ -5,6 +5,8 @@ const GroupModel = require('../models/GroupModel')
 const attendanceValidation = require('../validations/attendances')
 const utils = require('../utils/utils')
 const config = require('../config/config')
+const TeacherModel = require('../models/TeacherModel')
+const CourseModel = require('../models/CourseModel')
 const ShiftModel = require('../models/ShiftModel')
 const SubscriptionModel = require('../models/SubscriptionModel')
 const mongoose = require('mongoose')
@@ -12,13 +14,24 @@ const { telegramBot } = require('../bot/telegram-bot')
 const { format } = require('date-fns')
 const { ATTENDANCE_STATUS } = require('../utils/values')
 
+const calculateTotalAmountPaid = (payments) => {
+
+    let totalPaid = 0
+
+    for(let i=0;i<payments.length;i++) {
+        const payment = payments[i]
+        totalPaid += payment.amount
+    }
+
+    return totalPaid
+}
 
 const getUserAttendances = async (request, response) => {
 
     try {
 
         const { userId } = request.params
-        let { studentId, groupId, shiftId, subscriptionId, academicYear, recorderId, status, limit, page } = request.query
+        let { studentId, teacherId, courseId, groupId, shiftId, subscriptionId, academicYear, recorderId, status, limit, page } = request.query
 
         const { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -29,6 +42,14 @@ const getUserAttendances = async (request, response) => {
 
         if(studentId) {
             searchQuery.studentId = mongoose.Types.ObjectId(studentId)
+        }
+
+        if(teacherId) {
+            searchQuery.teacherId = mongoose.Types.ObjectId(teacherId)
+        }
+        
+        if(courseId) {
+            searchQuery.courseId = mongoose.Types.ObjectId(courseId)
         }
 
         if(groupId) {
@@ -119,6 +140,22 @@ const getUserAttendances = async (request, response) => {
                 }
             },
             {
+                $lookup: {
+                    from: 'teachers',
+                    localField: 'teacherId',
+                    foreignField: '_id',
+                    as: 'teacher'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'courses',
+                    localField: 'courseId',
+                    foreignField: '_id',
+                    as: 'course'
+                }
+            },
+            {
                 $project: {
                     'user.password': 0,
                     'recorder.password': 0
@@ -133,6 +170,8 @@ const getUserAttendances = async (request, response) => {
             attendance.shift = attendance.shift[0]
             attendance.subscription = attendance.subscription[0]
             attendance.recorder = attendance.recorder[0]
+            attendance.teacher = attendance.teacher[0]
+            attendance.course = attendance.course[0]
         })
 
         const totalAttendances = await AttendanceModel.countDocuments(searchQuery)
@@ -191,7 +230,7 @@ const addAttendance = async (request, response) => {
             })
         }
 
-        const { userId, studentId, recorderId, shiftId, groupId } = request.body
+        const { userId, teacherId, courseId, studentId, recorderId, shiftId, groupId, note } = request.body
 
         const userPromise = UserModel.findById(userId)
         const studentPromise = StudentModel.findById(studentId)
@@ -206,6 +245,28 @@ const addAttendance = async (request, response) => {
             recorderPromise,
             groupPromise
         ])
+
+        if(teacherId) {
+            const teacher = await TeacherModel.findById(teacherId)
+            if(!teacher) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Teacher ID is not registered',
+                    field: 'teacherId'
+                })
+            }
+        }
+
+        if(courseId) {
+            const course = await CourseModel.findById(courseId)
+            if(!course) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Course ID is not registered',
+                    field: 'courseId'
+                })
+            }
+        }
 
         if(!user) {
             return response.status(400).json({
@@ -285,7 +346,8 @@ const addAttendance = async (request, response) => {
 
         const attendanceData = {
             ...request.body, 
-            subscriptionId: activeSubscription._id
+            subscriptionId: activeSubscription._id,
+            note: shift.note
         }
         const attendanceObj = new AttendanceModel(attendanceData)
         const newAttendance = await attendanceObj.save()
@@ -307,6 +369,7 @@ const addAttendance = async (request, response) => {
             📖 الحصص المتبقية: ${updatedSubscription.allowedSessions - updatedSubscription.attendedSessions}
             📅 وقت الحضور: ${format(new Date(newAttendance.createdAt), `yyyy-MM-dd hh:mm a`)}
             📌 الحالة: ${ATTENDANCE_STATUS[newAttendance.status]}
+            📝 ملحوظة: ${newAttendance.note ? newAttendance.note : `لا يوجد`}
 
             نتمنى لك دوام التوفيق والالتزام! 🎓
         `
@@ -340,7 +403,7 @@ const addAttendanceBySubscriptionId = async (request, response) => {
 
     try {
 
-        const { subscriptionId } = request.params
+        const { subscriptionId, note } = request.params
 
         const subscription = await SubscriptionModel.findById(subscriptionId)
 
@@ -381,6 +444,124 @@ const addAttendanceBySubscriptionId = async (request, response) => {
         .findByIdAndUpdate(subscription._id, updateSubscriptionData, { new: true })
 
         const student = await StudentModel.findById(updatedSubscription.studentId)
+
+        const telegramMessage = `
+            📢  تسجيل للحضور!
+
+            🆔 رقم الاشتراك: ${updatedSubscription.subscriptionId}
+            👤 اسم الطالب: ${student.name}
+            🆔 رقم الطالب: ${student.studentId}
+            📖 الحصص المتبقية: ${updatedSubscription.allowedSessions - updatedSubscription.attendedSessions}
+            📅 وقت الحضور: ${format(new Date(newAttendance.createdAt), `yyyy-MM-dd hh:mm a`)}
+            📌 الحالة: ${ATTENDANCE_STATUS[newAttendance.status]}
+            📝 ملحوظة: ${note ? note : `لا يوجد`}
+
+            نتمنى لك دوام التوفيق والالتزام! 🎓
+        `
+
+        if(student.telegramId) {
+            telegramBot.sendMessage(student.telegramId, telegramMessage)
+        }
+
+        if(student.parentTelegramId) {
+            telegramBot.sendMessage(student.parentTelegramId, telegramMessage)
+        }
+
+        return response.status(200).json({
+            accepted: true,
+            message: 'تم اضافة الحضور بنجاح',
+            attendance: newAttendance,
+            subscription: updatedSubscription
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+const addAttendanceByStudentQRCodeUUID = async (request, response) => {
+
+    try {
+
+        const { QRCodeUUID } = request.params
+        const { isCheckPayment } = request.query
+
+        const studentsList = await StudentModel.find({ QRCodeUUID })
+        if(studentsList.length == 0) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'رمز الاستجابة السريع غير مسجل',
+                field: 'QRCodeUUID'
+            })
+        }
+
+        const student = studentsList[0]
+
+        if(!student.subscriptionId) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'لا يوجد اشتراك مسجل للطالب',
+                field: 'QRCodeUUID'
+            })
+        }
+
+        const subscriptionId = student.subscriptionId
+
+        const subscription = await SubscriptionModel.findById(subscriptionId)
+
+        if(subscription.status != 'ACTIVE' || new Date(subscription.endDate) < new Date()) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'الاشتراك منتهي الصلاحية',
+                field: 'subscriptionId'
+            })
+        }
+
+        if(subscription.attendedSessions >= subscription.allowedSessions) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'تم حضور كل الحصص المتاحة في الاشتراك',
+                field: 'subscriptionId'
+            })
+        }
+
+        if(isCheckPayment == 'TRUE' && !subscription.isPaid) {
+            
+            const payments = await PaymentModel.find({ subscriptionId: subscription._id, isRefunded: false })
+            const totalAmountPaid = calculateTotalAmountPaid(payments)
+            const remainingAmount = subscription.totalPrice - totalAmountPaid
+
+            return response.status(400).json({
+                accepted: false,
+                message: 'الاشتراك غير مدفوع بلكامل',
+                remainingAmount
+            })
+        }
+
+        const attendanceData = {
+            userId: subscription.userId,
+            studentId: subscription.studentId,
+            groupId: subscription.groupId,
+            recorderId: subscription.recorderId,
+            status: 'PRESENT',
+            academicYear: subscription.academicYear,
+            subscriptionId
+        }
+        const attendanceObj = new AttendanceModel(attendanceData)
+        const newAttendance = await attendanceObj.save()
+
+        const updateSubscriptionData = (subscription.attendedSessions + 1) == subscription.allowedSessions ?
+        { $inc: { attendedSessions: 1 }, status: 'EXPIRED' }
+        :
+        { $inc: { attendedSessions: 1 } }
+
+        const updatedSubscription = await SubscriptionModel
+        .findByIdAndUpdate(subscription._id, updateSubscriptionData, { new: true })
 
         const telegramMessage = `
             📢  تسجيل للحضور!
@@ -434,7 +615,7 @@ const updateAttendanceStatus = async (request, response) => {
         }
 
         const { attendanceId } = request.params
-        const { status } = request.body
+        const { status, note } = request.body
 
         const attendance = await AttendanceModel.findById(attendanceId)
         const shift = await ShiftModel.findById(attendance.shiftId)
@@ -462,6 +643,7 @@ const updateAttendanceStatus = async (request, response) => {
             📖 الحصص المتبقية: ${subscription.allowedSessions - subscription.attendedSessions}
             📅 وقت الحضور: ${format(new Date(updatedAttendance.createdAt), `yyyy-MM-dd hh:mm a`)}
             📌 الحالة: ${ATTENDANCE_STATUS[updatedAttendance.status]}
+            📝 ملحوظة: ${note ? note : `لا يوجد`}
 
             نتمنى لك دوام التوفيق والالتزام! 🎓
         `
@@ -504,7 +686,7 @@ const updateAttendanceStatusByStudentIdAndShiftId = async (request, response) =>
         }
 
         const { studentId, shiftId } = request.params
-        const { status } = request.body
+        const { status, note } = request.body
 
         const shift = await ShiftModel.findById(shiftId)
 
@@ -534,6 +716,7 @@ const updateAttendanceStatusByStudentIdAndShiftId = async (request, response) =>
             📖 الحصص المتبقية: ${subscription.allowedSessions - subscription.attendedSessions}
             📅 وقت الحضور: ${format(new Date(targetAttendance.createdAt), `yyyy-MM-dd hh:mm a`)}
             📌 الحالة: ${ATTENDANCE_STATUS[targetAttendance.status]}
+            📝 ملحوظة: ${note ? note : `لا يوجد`}
 
             نتمنى لك دوام التوفيق والالتزام! 🎓
         `
@@ -633,4 +816,13 @@ const deleteAttendance = async (request, response) => {
 }
 
 
-module.exports = { getUserAttendances, getStudentsThatAttendedInShift, addAttendance, addAttendanceBySubscriptionId, updateAttendanceStatus, updateAttendanceStatusByStudentIdAndShiftId, deleteAttendance }
+module.exports = { 
+    getUserAttendances, 
+    getStudentsThatAttendedInShift, 
+    addAttendance, 
+    addAttendanceBySubscriptionId, 
+    addAttendanceByStudentQRCodeUUID,
+    updateAttendanceStatus, 
+    updateAttendanceStatusByStudentIdAndShiftId, 
+    deleteAttendance 
+}

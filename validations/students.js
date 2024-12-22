@@ -3,7 +3,7 @@ const config = require('../config/config')
 
 const addStudent = (studentData) => {
 
-    const { userId, groupId, telegramId, parentTelegramId, name, phone, parentPhone, gender, isActive, birthDate, academicYear, address, referredBy } = studentData
+    const { userId, groupId, courseId, telegramId, parentTelegramId, name, phone, parentPhone, gender, isActive, birthDate, academicYear, address, referredBy } = studentData
 
     if(!userId) return { isAccepted: false, message: 'User ID is required', field: 'userId' }
 
@@ -12,6 +12,8 @@ const addStudent = (studentData) => {
     if(!groupId) return { isAccepted: false, message: 'Group ID is required', field: 'groupId' }
 
     if(!utils.isObjectId(groupId)) return { isAccepted: false, message: 'Group ID format is invalid', field: 'groupId' }
+
+    if(courseId && !utils.isObjectId(courseId)) return { isAccepted: false, message: 'Course ID format is invalid', field: 'courseId' }
 
     if(telegramId && typeof telegramId != 'string') return { isAccepted: false, message: 'Telegram ID format is invalid', field: 'telegramId' }
 
@@ -53,9 +55,11 @@ const addStudent = (studentData) => {
 
 const updateStudent = (studentData) => {
 
-    const { groupId, name, phone, telegramId, parentTelegramId, parentPhone, gender, isActive, birthDate, address, referredBy } = studentData
+    const { groupId, courseId, name, phone, telegramId, parentTelegramId, parentPhone, gender, isActive, birthDate, address, referredBy } = studentData
 
     if(groupId && !utils.isObjectId(groupId)) return { isAccepted: false, message: 'Group ID format is invalid', field: 'groupId' }
+
+    if(courseId && !utils.isObjectId(courseId)) return { isAccepted: false, message: 'Course ID format is invalid', field: 'courseId' }
 
     if(name && typeof name != 'string') return { isAccepted: false, message: 'Name format is invalid', field: 'name' }
 

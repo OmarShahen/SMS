@@ -5,6 +5,8 @@ const ExamSchema = new mongoose.Schema({
 
     examId: { type: Number, required: true },
     userId: { type: mongoose.Types.ObjectId, required: true },
+    teacherId: { type: mongoose.Types.ObjectId },
+    courseId: { type: mongoose.Types.ObjectId },
     groups: [mongoose.Types.ObjectId],
     name: { type: String, required: true },
     type: { type: String, enum: config.EXAM_TYPES },

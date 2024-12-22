@@ -10,6 +10,9 @@ const AttendanceModel = require('../models/AttendanceModel')
 const AssignmentModel = require('../models/AssignmentModel')
 const SubmissionModel = require('../models/SubmissionModel')
 const PaymentModel = require('../models/PaymentModel')
+const SpecializationModel = require('../models/SpecializationModel')
+const TeacherModel = require('../models/TeacherModel')
+const CourseModel = require('../models/CourseModel')
 
 
 const verifyUserId = async (request, response, next) => {
@@ -396,6 +399,112 @@ const verifyPaymentId = async (request, response, next) => {
     }
 }
 
+const verifySpecializationId = async (request, response, next) => {
+
+    try {
+
+        const { specializationId } = request.params
+
+        if(!utils.isObjectId(specializationId)) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'Invalid specialization ID format',
+                field: 'specializationId'
+            })
+        }
+
+        const specialization = await SpecializationModel.findById(specializationId)
+        if(!specialization) {
+            return response.status(404).json({
+                accepted: false,
+                message: 'Specialization ID does not exist',
+                field: 'specializationId'
+            })
+        }
+
+        return next()
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+const verifyTeacherId = async (request, response, next) => {
+
+    try {
+
+        const { teacherId } = request.params
+
+        if(!utils.isObjectId(teacherId)) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'Invalid teacher ID format',
+                field: 'teacherId'
+            })
+        }
+
+        const teacher = await TeacherModel.findById(teacherId)
+        if(!teacher) {
+            return response.status(404).json({
+                accepted: false,
+                message: 'Teacher ID does not exist',
+                field: 'teacherId'
+            })
+        }
+
+        return next()
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+const verifyCourseId = async (request, response, next) => {
+
+    try {
+
+        const { courseId } = request.params
+
+        if(!utils.isObjectId(courseId)) {
+            return response.status(400).json({
+                accepted: false,
+                message: 'Invalid course ID format',
+                field: 'courseId'
+            })
+        }
+
+        const course = await CourseModel.findById(courseId)
+        if(!course) {
+            return response.status(404).json({
+                accepted: false,
+                message: 'Course ID does not exist',
+                field: 'courseId'
+            })
+        }
+
+        return next()
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+
 
 module.exports = { 
     verifyUserId,
@@ -408,5 +517,8 @@ module.exports = {
     verifyAttendanceId,
     verifyAssignmentId,
     verifySubmissionId,
-    verifyPaymentId
+    verifyPaymentId,
+    verifySpecializationId,
+    verifyTeacherId,
+    verifyCourseId
 }

@@ -1,6 +1,7 @@
 const StudentModel = require('../models/StudentModel')
 const GroupModel = require('../models/GroupModel')
 const UserModel = require('../models/UserModel')
+const CourseModel = require('../models/CourseModel')
 const GradeModel = require('../models/GradeModel')
 const CounterModel = require('../models/CounterModel')
 const studentValidation = require('../validations/students')
@@ -9,6 +10,7 @@ const config = require('../config/config')
 const mongoose = require('mongoose')
 const { telegramBot } = require('../bot/telegram-bot')
 const { MENU_MESSAGE } = require('../bot/messages/messages')
+const { v4: uuidv4 } = require('uuid')
 
 
 const getUserStudents = async (request, response) => {
@@ -16,7 +18,7 @@ const getUserStudents = async (request, response) => {
     try {
 
         const { userId } = request.params
-        let { groupId, name, phone, gender, referredBy, isActive, academicYear, isTelegram, limit, page } = request.query
+        let { studentId, groupId, courseId, name, phone, gender, referredBy, isActive, academicYear, isTelegram, limit, page } = request.query
 
         let { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -26,6 +28,10 @@ const getUserStudents = async (request, response) => {
         const skip = (page - 1) * limit
 
         searchQuery = name || phone ? { ...searchQuery, $or: [] } : { ...searchQuery }
+
+        if(studentId) {
+            searchQuery._id = mongoose.Types.ObjectId(studentId)
+        }
 
         if(name) {
             searchQuery.$or.push({ name: { $regex: name, $options: 'i' } })
@@ -37,6 +43,10 @@ const getUserStudents = async (request, response) => {
 
         if(groupId) {
             searchQuery.groupId = mongoose.Types.ObjectId(groupId)
+        }
+
+        if(courseId) {
+            searchQuery.courseId = mongoose.Types.ObjectId(courseId)
         }
 
         if(isActive == 'TRUE') {
@@ -96,6 +106,14 @@ const getUserStudents = async (request, response) => {
             },
             {
                 $lookup: {
+                    from: 'courses',
+                    localField: 'courseId',
+                    foreignField: '_id',
+                    as: 'course'
+                }
+            },
+            {
+                $lookup: {
                     from: 'subscriptions',
                     localField: 'subscriptionId',
                     foreignField: '_id',
@@ -112,6 +130,7 @@ const getUserStudents = async (request, response) => {
         students.forEach(student => {
             student.user = student.user[0]
             student.group = student.group[0]
+            student.course = student.course[0]
             student.subscription = student.subscription[0]
         })
 
@@ -120,6 +139,67 @@ const getUserStudents = async (request, response) => {
         return response.status(200).json({
             accepted: true,
             totalStudents,
+            students
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+const getStudentByQRCodeUUID = async (request, response) => {
+
+    try {
+
+        const { QRCodeUUID } = request.params
+
+        const students = await StudentModel.aggregate([
+            {
+                $match: { QRCodeUUID }
+            },
+            {
+                $lookup: {
+                    from: 'groups',
+                    localField: 'groupId',
+                    foreignField: '_id',
+                    as: 'group'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'subscriptions',
+                    localField: 'subscriptionId',
+                    foreignField: '_id',
+                    as: 'subscription'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'payments',
+                    localField: 'subscription.payments',
+                    foreignField: '_id',
+                    as: 'payments'
+                }
+            },
+            {
+                $project: {
+                    'user.password': 0,
+                }
+            }
+        ])
+
+        students.forEach(student => {
+            student.group = student.group[0]
+            student.subscription = student.subscription[0]
+        })
+
+        return response.status(200).json({
+            accepted: true,
             students
         })
 
@@ -146,7 +226,7 @@ const addStudent = async (request, response) => {
             })
         }
 
-        const { userId, groupId, telegramId, name, phone } = request.body
+        const { userId, groupId, courseId, telegramId, name, phone } = request.body
 
         const user = await UserModel.findById(userId)
         if(!user) {
@@ -164,6 +244,17 @@ const addStudent = async (request, response) => {
                 message: 'Group ID is not registered',
                 field: 'groupId'
             })
+        }
+
+        if(courseId) {
+            const course = await CourseModel.findById(courseId)
+            if(!course) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Course ID is not registered',
+                    field: 'courseId'
+                })
+            }
         }
 
         if(telegramId) {
@@ -192,7 +283,11 @@ const addStudent = async (request, response) => {
             { new: true, upsert: true }
         )
 
-        const studentData = { studentId: counter.value, ...request.body }
+        const studentData = { 
+            studentId: counter.value, 
+            ...request.body,
+            QRCodeUUID: uuidv4()
+        }
         const studentObj = new StudentModel(studentData)
         const newStudent = await studentObj.save()
 
@@ -232,7 +327,7 @@ const updateStudent = async (request, response) => {
         }
 
         const { studentId } = request.params
-        let { name, phone, groupId, telegramId } = request.body
+        let { name, phone, groupId, courseId, telegramId } = request.body
 
         const student = await StudentModel.findById(studentId)
 
@@ -252,6 +347,17 @@ const updateStudent = async (request, response) => {
                     accepted: false,
                     message: 'لا يوجد مكان في المجموعة',
                     field: 'groupId'
+                })
+            }
+        }
+
+        if(courseId && student.courseId != courseId) {
+            const course = await CourseModel.findById(courseId)
+            if(!course) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Course ID does not exist',
+                    field: 'courseId'
                 })
             }
         }
@@ -380,5 +486,46 @@ const removeTelegramID = async (request, response) => {
     }
 }
 
+const createNewQRCodeUUID = async (request, response) => {
 
-module.exports = { getUserStudents, addStudent, updateStudent, deleteStudent, removeTelegramID }
+    try {
+
+        const { studentId } = request.params
+
+        const QRCodeUUID = uuidv4()
+
+        const updatedStudent = await StudentModel
+        .findByIdAndUpdate(studentId, { QRCodeUUID }, { new: true })
+
+        if(updatedStudent.telegramId) {
+            const message = `تم انشاء كود تسجيل حضور جديد: ${config.URL}/qr-code/${updatedStudent.QRCodeUUID}`
+            telegramBot.sendMessage(updatedStudent.telegramId, message)
+        }
+
+        return response.status(200).json({
+            accepted: true,
+            message: 'تم تحديث كود الاستجابة السريع للطالب بنجاح',
+            student: updatedStudent
+        })
+
+    } catch(error) {
+        console.error(error)
+        return response.status(500).json({
+            accepted: false,
+            message: 'internal server error',
+            error: error.message
+        })
+    }
+}
+
+
+
+module.exports = { 
+    getUserStudents, 
+    getStudentByQRCodeUUID,
+    addStudent, 
+    updateStudent, 
+    deleteStudent, 
+    removeTelegramID, 
+    createNewQRCodeUUID 
+}

@@ -5,6 +5,8 @@ const GroupSchema = new mongoose.Schema({
 
     groupId: { type: Number, required: true },
     userId: { type: mongoose.Types.ObjectId, required: true },
+    teacherId: { type: mongoose.Types.ObjectId },
+    courseId: { type: mongoose.Types.ObjectId },
     name: { type: String, required: true },
     isActive: { type: Boolean, default: true },
     isFull: { type: Boolean, default: false },

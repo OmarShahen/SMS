@@ -3,7 +3,7 @@ const utils = require('../utils/utils')
 
 const addGrade = (gradeData) => {
 
-    const { userId, studentId, examId, correctorId, score, note } = gradeData
+    const { userId, studentId, examId, correctorId, teacherId, courseId, score, note } = gradeData
 
     if(!userId) return { isAccepted: false, message: 'User ID is required', field: 'userId' }
 
@@ -20,6 +20,10 @@ const addGrade = (gradeData) => {
     if(!correctorId) return { isAccepted: false, message: 'Corrector ID is required', field: 'correctorId' }
 
     if(!utils.isObjectId(correctorId)) return { isAccepted: false, message: 'Corrector ID format is invalid', field: 'correctorId' }
+
+    if(teacherId && !utils.isObjectId(teacherId)) return { isAccepted: false, message: 'Teacher ID format is invalid', field: 'teacherId' }
+
+    if(courseId && !utils.isObjectId(courseId)) return { isAccepted: false, message: 'Course ID format is invalid', field: 'courseId' }
 
     if(!score) return { isAccepted: false, message: 'Score is required', field: 'score' }
 

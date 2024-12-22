@@ -7,6 +7,8 @@ const SubmissionModel = require('../models/SubmissionModel')
 const AssignmentModel = require('../models/AssignmentModel')
 const CounterModel = require('../models/CounterModel')
 const mongoose = require('mongoose')
+const TeacherModel = require('../models/TeacherModel')
+const CourseModel = require('../models/CourseModel')
 
 
 const getUserSubmissions = async (request, response) => {
@@ -14,7 +16,7 @@ const getUserSubmissions = async (request, response) => {
     try {
 
         const { userId } = request.params
-        let { studentId, groupId, assignmentId, status, academicYear, limit, page } = request.query
+        let { studentId, teacherId, courseId, groupId, assignmentId, status, academicYear, limit, page } = request.query
 
         const { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -25,6 +27,14 @@ const getUserSubmissions = async (request, response) => {
 
         if(studentId) {
             searchQuery.studentId = mongoose.Types.ObjectId(studentId)
+        }
+
+        if(teacherId) {
+            searchQuery.teacherId = mongoose.Types.ObjectId(teacherId)
+        }
+        
+        if(courseId) {
+            searchQuery.courseId = mongoose.Types.ObjectId(courseId)
         }
 
         if(groupId) {
@@ -91,6 +101,22 @@ const getUserSubmissions = async (request, response) => {
                 }
             },
             {
+                $lookup: {
+                    from: 'teachers',
+                    localField: 'teacherId',
+                    foreignField: '_id',
+                    as: 'teacher'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'courses',
+                    localField: 'courseId',
+                    foreignField: '_id',
+                    as: 'course'
+                }
+            },
+            {
                 $project: {
                     'user.password': 0,
                 }
@@ -102,6 +128,8 @@ const getUserSubmissions = async (request, response) => {
             submission.group = submission.group[0]
             submission.student = submission.student[0]
             submission.assignment = submission.assignment[0]
+            submission.teacher = submission.teacher[0]
+            submission.course = submission.course[0]
         })
 
         const totalSubmissions = await SubmissionModel.countDocuments(searchQuery)
@@ -147,7 +175,6 @@ const getStudentsThatSubmittedAssignment = async (request, response) => {
     }
 }
 
-
 const addSubmission = async (request, response) => {
 
     try {
@@ -161,7 +188,7 @@ const addSubmission = async (request, response) => {
             })
         }
 
-        const { userId, studentId, assignmentId, status } = request.body
+        const { userId, teacherId, courseId, studentId, assignmentId, status } = request.body
 
         const userPromise = UserModel.findById(userId)
         const studentPromise = StudentModel.findById(studentId)
@@ -179,6 +206,28 @@ const addSubmission = async (request, response) => {
                 message: 'User ID is not registered',
                 field: 'userId'
             })
+        }
+
+        if(teacherId) {
+            const teacher = await TeacherModel.findById(teacherId)
+            if(!teacher) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Teacher ID is not registered',
+                    field: 'teacherId'
+                })
+            }
+        }
+
+        if(courseId) {
+            const course = await CourseModel.findById(courseId)
+            if(!course) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Course ID is not registered',
+                    field: 'courseId'
+                })
+            }
         }
 
         if(!student) {

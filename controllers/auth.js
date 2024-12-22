@@ -154,7 +154,7 @@ const userGoogleLogin = async (request, response) => {
         const googleResponse = await axios
         .get(`https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${accessToken}`)
 
-        const { email } = googleResponse.data
+        const { email, picture } = googleResponse.data
 
         const userList = await UserModel
         .find({ email, isVerified: true })
@@ -167,7 +167,7 @@ const userGoogleLogin = async (request, response) => {
             })
         }
 
-        const user = userList[0]
+        let user = userList[0]
 
         if(user.isBlocked) {
             return response.status(400).json({
@@ -180,13 +180,13 @@ const userGoogleLogin = async (request, response) => {
         const updatedUser = await UserModel
         .findByIdAndUpdate(user._id, { lastLoginDate: new Date() }, { new: true })
 
-        updatedUser.password = undefined
-
         const token = jwt.sign(user._doc, config.SECRET_KEY, { expiresIn: '365d' })
+
+        user = { ...updatedUser._doc, password: undefined, profilePicture: picture } 
 
         return response.status(200).json({
             accepted: true,
-            user: updatedUser,
+            user,
             token
         })
 
@@ -199,7 +199,6 @@ const userGoogleLogin = async (request, response) => {
         })
     }
 }
-
 
 const verifyEmailVerificationCode = async (request, response) => {
 
@@ -363,7 +362,6 @@ const addUserEmailVerificationCode = async (request, response) => {
     }
 }
 
-
 const forgotPassword = async (request, response) => {
 
     try {
@@ -430,7 +428,6 @@ const forgotPassword = async (request, response) => {
         })
     }
 }
-
 const sendUserDeleteAccountVerificationCode = async (request, response) => {
 
     try {
@@ -497,7 +494,6 @@ const sendUserDeleteAccountVerificationCode = async (request, response) => {
         })
     }
 }
-
 const verifyDeleteAccountVerificationCode = async (request, response) => {
 
     try {
@@ -589,7 +585,6 @@ const verifyResetPasswordVerificationCode = async (request, response) => {
         })
     }
 }
-
 const resetPassword = async (request, response) => {
 
     try {
@@ -660,6 +655,7 @@ const resetPassword = async (request, response) => {
         })
     }
 }
+
 
 module.exports = {
     userLogin,

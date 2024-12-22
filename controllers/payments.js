@@ -3,6 +3,8 @@ const UserModel = require('../models/UserModel')
 const SubscriptionModel = require('../models/SubscriptionModel')
 const StudentModel = require('../models/StudentModel')
 const CounterModel = require('../models/CounterModel')
+const TeacherModel = require('../models/TeacherModel')
+const CourseModel = require('../models/CourseModel')
 const paymentValidation = require('../validations/payments')
 const utils = require('../utils/utils')
 const mongoose = require('mongoose')
@@ -29,7 +31,7 @@ const getUserPayments = async (request, response) => {
     try {
 
         const { userId } = request.params
-        let { recorderId, studentId, subscriptionId, groupId, academicYear, isRefunded, paymentMethod, page, limit } = request.query
+        let { recorderId, teacherId, courseId, studentId, subscriptionId, groupId, academicYear, isRefunded, paymentMethod, page, limit } = request.query
 
         const { searchQuery } = utils.statsQueryGenerator('userId', userId, request.query)
 
@@ -40,6 +42,14 @@ const getUserPayments = async (request, response) => {
 
         if(recorderId) {
             searchQuery.recorderId = mongoose.Types.ObjectId(recorderId)
+        }
+
+        if(teacherId) {
+            searchQuery.teacherId = mongoose.Types.ObjectId(teacherId)
+        }
+        
+        if(courseId) {
+            searchQuery.courseId = mongoose.Types.ObjectId(courseId)
         }
 
         if(studentId) {
@@ -124,6 +134,22 @@ const getUserPayments = async (request, response) => {
                 }
             },
             {
+                $lookup: {
+                    from: 'teachers',
+                    localField: 'teacherId',
+                    foreignField: '_id',
+                    as: 'teacher'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'courses',
+                    localField: 'courseId',
+                    foreignField: '_id',
+                    as: 'course'
+                }
+            },
+            {
                 $project: {
                     'recorder.password': 0,
                     'refunder.password': 0
@@ -137,6 +163,8 @@ const getUserPayments = async (request, response) => {
             payment.student = payment.student[0]
             payment.group = payment.group[0]
             payment.refunder = payment.refunder[0]
+            payment.teacher = payment.teacher[0]
+            payment.course = payment.course[0]
         })
 
         const totalPayments = await PaymentModel.countDocuments(searchQuery)
@@ -170,7 +198,7 @@ const addPayment = async (request, response) => {
             })
         }
 
-        const { userId, recorderId, studentId, subscriptionId, amount } = request.body
+        const { userId, teacherId, courseId, recorderId, studentId, subscriptionId, amount } = request.body
 
         const user = await UserModel.findById(userId)
         if(!user) {
@@ -179,6 +207,28 @@ const addPayment = async (request, response) => {
                 message: 'User ID is not registered',
                 field: 'userId'
             })
+        }
+
+        if(teacherId) {
+            const teacher = await TeacherModel.findById(teacherId)
+            if(!teacher) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Teacher ID is not registered',
+                    field: 'teacherId'
+                })
+            }
+        }
+
+        if(courseId) {
+            const course = await CourseModel.findById(courseId)
+            if(!course) {
+                return response.status(400).json({
+                    accepted: false,
+                    message: 'Course ID is not registered',
+                    field: 'courseId'
+                })
+            }
         }
 
         const recorder = await UserModel.findById(recorderId)

@@ -10,6 +10,8 @@ const UserSchema = new mongoose.Schema({
     password: { type: String },
     sessionPrice: { type: Number, required: true, default: 0 },
     lang: { type: String, default: 'ar', enum: config.LANGUAGES },
+    academicType: { type: String, default: 'ALL', enum: config.ACADEMIC_TYPES },
+    organizationType: { type: String, default: 'TEACHER', enum: config.ORGANIZATION_TYPES },
 
     oauth: {
         isGoogleAuth: { type: Boolean, default: false }
@@ -85,6 +87,24 @@ const UserSchema = new mongoose.Schema({
             isUpdate: { type: Boolean, default: true },
             isDelete: { type: Boolean, default: true }
         },
+        specializations: {
+            isCreate: { type: Boolean, default: true },
+            isRead: { type: Boolean, default: true },
+            isUpdate: { type: Boolean, default: true },
+            isDelete: { type: Boolean, default: true }
+        },
+        teachers: {
+            isCreate: { type: Boolean, default: true },
+            isRead: { type: Boolean, default: true },
+            isUpdate: { type: Boolean, default: true },
+            isDelete: { type: Boolean, default: true }
+        },
+        courses: {
+            isCreate: { type: Boolean, default: true },
+            isRead: { type: Boolean, default: true },
+            isUpdate: { type: Boolean, default: true },
+            isDelete: { type: Boolean, default: true }
+        }
     },
 
 
